@@ -86,17 +86,21 @@ function single(func) {
   return async () => {
     if (lock) return;
     lock = true;
-    const lockTimeout = setTimeout(() => {
-      lock = false;
-      console.log("[Bot] Cacncel lock");
-    }, 1000 * 60 * 2);
+    const lockTimeout = setInterval(async () => {
+      cj = await loadCookie();
+      if (!await testCookieExpired(cj)) {
+        lock = false;
+        console.log("[Bot] Cacncel lock");
+        clearInterval(lockTimeout);
+      }
+    }, 1000 * 60 * 1.5);
     try {
       await func();
     } catch (err) {
       console.log(err);
     } finally {
       lock = false;
-      clearTimeout(lockTimeout);
+      clearInterval(lockTimeout);
     }
   };
 }
