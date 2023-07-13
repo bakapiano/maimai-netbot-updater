@@ -299,7 +299,7 @@ if (config.bot.enable)
       }
 
       for (const data of appendBack) {
-        await appendQueue(data);
+        appendQueue(data);
       }
 
       // Get friend list
