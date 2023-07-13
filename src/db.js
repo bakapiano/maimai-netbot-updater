@@ -10,7 +10,7 @@ fileDB.read().then(() => {
     fileDB.data.count = 0;
   }
   if (!fileDB.data.friendCodeList) {
-    fileDB.data.friendCodeList = new Set();
+    fileDB.data.friendCodeList = {};
   }
   fileDB.write();
 });
@@ -58,12 +58,12 @@ async function clearExpireData() {
 
 function checkFriendCodeCache(friendCode) {
   if (fileDB.data.friendCodeList === undefined) return false;
-  return fileDB.data.friendCodeList.has(friendCode);
+  return fileDB.data.friendCodeList[friendCode] !== undefined;
 }
 
 function addFriendCodeCache(friendCode) {
   if (fileDB.data.friendCodeList === undefined) return;
-  fileDB.data.friendCodeList.add(friendCode);
+  fileDB.data.friendCodeList[friendCode] = "1";
 }
 
 function increaseCount() {
