@@ -266,7 +266,7 @@ if (config.bot.enable)
               await delValue(friendCode);
             }
           }, 1000 * 60 * 1);
-          allowFriendRequest(cj, friendCode).then(()=>{
+          allowFriendRequest(cj, friendCode).then(async ()=>{
             clearTimeout(timeout);
             await trace({
               log: "成功接受好友申请",
@@ -277,7 +277,7 @@ if (config.bot.enable)
               status: "sent",
               time: new Date().getTime(),
             });
-          }).catch(()=>{
+          }).catch(async ()=>{
             await trace({
               log: `接受好友请求失败，请尝试重新添加或等待bot主动发起好友申请`,
             });
