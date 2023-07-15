@@ -91,7 +91,7 @@ function single(func) {
     if (lock !== undefined) return;
     lock = genUUID();
     const lockTimeout = setInterval(async () => {
-      cj = await loadCookie();
+      const cj = await loadCookie();
       if (!await testCookieExpired(cj)) {
         lock = undefined;
         console.log("[Bot] Cacncel lock");
