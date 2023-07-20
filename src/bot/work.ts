@@ -171,6 +171,7 @@ async function sendFriendRequestWork(data: WorkerData) {
       trace({ log: `好友请求发送成功，请在5分钟内接受！` });
     } else if (Date.now() - item.requestConfirmedTime > 1000 * 60 * 5) {
       trace({ log: `5分钟内未接受好友请求，请重试！`, status: "failed" });
+      cancelFriendRequest(friendCode).catch();
       removeFromQueue(item);
     }
   });
@@ -194,7 +195,7 @@ async function startUpdateWork(data: WorkerData) {
         .catch(async (error) => {
           await trace({ log: `更新失败: ${String(error)}`, status: "failed" });
 
-          removeFriend(friendCode);
+          removeFriend(friendCode).catch();
           removeFromQueue(item);
           await delValue(friendCode);
           console.log("[Bot][StartUpdateWork] Error: ", error);

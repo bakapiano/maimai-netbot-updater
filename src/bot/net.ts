@@ -84,7 +84,7 @@ const getSentRequests = async () => {
   );
   const text = await result.text();
   const t = text.matchAll(/<input type="hidden" name="idx" value="(.*?)"/g);
-  const ids = [...t].map((x) => x[1]);
+  const ids = [...new Set([...t].map((x) => x[1]))];
   console.log(`[Bot][Net] Done get sent friend requests: `, ids);
   return ids;
 };
@@ -96,7 +96,7 @@ const getAccpetRequests = async () => {
   );
   const text = await result.text();
   const t = text.matchAll(/<input type="hidden" name="idx" value="(.*?)"/g);
-  const ids = [...t].map((x) => x[1]);
+  const ids = [...new Set([...t].map((x) => x[1]))]
   console.log(`[Bot][Net] Done get accept friend requests: `, ids);
   return ids;
 };
