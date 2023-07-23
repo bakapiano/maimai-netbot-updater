@@ -24,6 +24,8 @@ const WHITE_LIST = [
 
   "maimai.bakapiano.online",
   "api.maimai.bakapiano.online",
+
+  "api.maimai.bakapiano.com",
 ].concat(config.host);
 
 function checkHostInWhiteList(target: string | null) {
