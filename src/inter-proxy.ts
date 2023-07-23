@@ -21,6 +21,9 @@ const WHITE_LIST = [
 
   "libs.baidu.com",
   "maibot.bakapiano.com",
+
+  "maimai.bakapiano.online",
+  "api.maimai.bakapiano.online",
 ].concat(config.host);
 
 function checkHostInWhiteList(target: string | null) {

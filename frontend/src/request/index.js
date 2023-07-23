@@ -10,6 +10,10 @@ const config = {
 if (env.dev) {
   config.baseURL = 'http://127.0.0.1:8081'
 }
+else {
+  config.baseURL = "https://api.maimai.bakapiano.online/"
+}
+
 
 const service = axios.create(config)
 

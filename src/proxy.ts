@@ -26,6 +26,9 @@ const WHITE_LIST = [
   "res.wx.qq.com",
 
   "libs.baidu.com",
+
+  "maimai.bakapiano.online",
+  "api.maimai.bakapiano.online",
 ].concat(config.host);
 
 function checkHostInWhiteList(target: string | null) {
