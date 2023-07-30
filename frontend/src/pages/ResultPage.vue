@@ -32,7 +32,12 @@
         ]
         " :percentage="data?.progress || 0" :show-indicator="false" :processing="data?.status === 'running'"
         :indicator-placement="'inside'" />
-    </n-card>
+      <template v-if="isBotTrace" #action>
+        <n-button type="primary" :on-click="copyFriendCode">
+          复制好友代码
+        </n-button> 
+      </template>
+      </n-card>
   </n-spin>
 </template>
 
@@ -51,10 +56,16 @@ const data = ref(undefined)
 const loadingFirstTrace = ref(true)
 const error = ref(false)
 const inProgress = ref(true)
+const isBotTrace = window.location.href.indexOf("isBot=true") > -1
 
 const { uuid } = route.params
 let intervalId = null
 let failedFetchCount = 0 
+
+function copyFriendCode() {
+  navigator.clipboard.writeText('413252453611467')
+  message.success('Bot 好友代码已复制到剪切板')
+}
 
 watch(inProgress, async (value, oldValue) => {
   if (oldValue && !value) {

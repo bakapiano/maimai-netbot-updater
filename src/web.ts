@@ -171,21 +171,25 @@ if (config.wechatLogin.enable) {
 }
 
 if (config.bot.enable) {
-  app.post("/bot", jsonParser, async (req: any, res: any) => {
-    const { username, password, friendCode } = req.body;
+  async function botServe(serverReq: any, serverRes: any, data: any, redirect: boolean) {
+    let { username, password, friendCode, callbackHost } = data;
+
+    if (callbackHost === undefined) {
+      callbackHost = config.host;
+    }
 
     if (!username || !password || !friendCode) {
-      res.status(400);
+      serverRes.status(400);
       return;
     }
 
     if (!(await verifyProberAccount(username, password))) {
-      res.status(400).send("查分器用户名或密码错误！");
+      serverRes.status(400).send("查分器用户名或密码错误！");
       return;
     }
 
     if (queueLock) {
-      res.status(400).send("Bot 同时使用人数过多，请稍后再试！");
+      serverRes.status(400).send("Bot 同时使用人数过多，请稍后再试！");
       return;
     }
 
@@ -195,7 +199,7 @@ if (config.bot.enable) {
 
     const traceUUID = genUUID();
     const protocol = config.dev ? "http" : "https";
-    const tracePageUrl = `${protocol}://${config.host}/#/trace/${traceUUID}/`;
+    const tracePageUrl = `${protocol}://${callbackHost}/#/trace/${traceUUID}/?isBot=${true}`;
     const trace = useTrace(traceUUID);
 
     await trace({
@@ -204,7 +208,7 @@ if (config.bot.enable) {
       progress: 0,
       time: new Date().getTime(),
     });
-    
+
     appendQueue({
       username,
       password,
@@ -213,7 +217,18 @@ if (config.bot.enable) {
       createTime: Date.now(),
     });
 
-    res.status(200).send(tracePageUrl);
+    redirect
+      ? serverRes.redirect(tracePageUrl)
+      : serverRes.status(200).send(tracePageUrl);
+  }
+
+  // Shortcut link for bot
+  app.get("/bot", async (serverReq: any, serverRes: any) => {
+    return await botServe(serverReq, serverRes, serverReq.query, true);
+  });
+  // Bot API
+  app.post("/bot", jsonParser, async (serverReq: any, serverRes: any) => {
+    return await botServe(serverReq, serverRes, serverReq.body, false);
   });
 }
 

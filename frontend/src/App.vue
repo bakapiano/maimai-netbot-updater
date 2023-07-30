@@ -58,8 +58,7 @@
               :show-trigger="true"
               :native-scrollbar="false"
               bordered
-              stle="z-index: 998;"
-              style="z-index: 998244353"
+              style="z-index: 1"
               collapse-mode="width"
               :collapsed-width="0"
               :width="128"

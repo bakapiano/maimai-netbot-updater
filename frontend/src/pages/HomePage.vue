@@ -1,6 +1,15 @@
 <template>
   <n-space vertical>
+
     <proxy-checker v-model="proxyStatus"></proxy-checker>
+    <n-card :bordered="false" title="代理更新麻烦？">
+      试试 
+        <router-link to="/bot"> 
+          <n-a href=""> Bot 更新</n-a>
+         
+        </router-link>
+        ！
+    </n-card>
     <prober-from :proxy-status="proxyStatus"></prober-from>
     <power-up />
     <frequently-asked />
