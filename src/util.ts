@@ -22,10 +22,7 @@ async function fetchWithCookieWithRetry(cj: any, url: string, options : any | un
     } catch (e) {
       console.log(`Delay due to fetch failed with attempt ${url} #${i + 1}, error: ${e}`);
       if (i === config.fetchRetryCount - 1) throw e;
-
-      await new Promise((r) => {
-        setTimeout(r, 1000);
-      });
+      else await sleep(1000)
     }
   }
 } 

@@ -1,9 +1,9 @@
+import { fetchWithCookieWithRetry, sleep } from "./util.js";
 import { useStage, useTrace } from "./trace.js";
 
 import { CookieJar } from "node-fetch-cookies";
 import config from "./config.js";
 import fetch from "node-fetch";
-import { fetchWithCookieWithRetry } from "./util.js";
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
@@ -87,9 +87,7 @@ const updateMaimaiScore = async (
   try {
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
-
     const cj = new CookieJar();
-
     const fetch = async (url : string, options : any = undefined) =>
       await fetchWithCookieWithRetry(cj, url, options);
 
@@ -152,7 +150,7 @@ const updateMaimaiScore = async (
         }
         
         // Sleep random time to avoid ban
-        await new Promise((r) => setTimeout(r, 1000 * (diff + 1) * 2 + 1000 * 5 * Math.random()));
+        await sleep(1000 * (diff + 1) * 2 + 1000 * 5 * Math.random())
         
         let body : undefined | string = undefined;
         
@@ -305,7 +303,7 @@ const updateChunithmScore = async (
         }
 
         // Sleep random time to avoid ban
-        await new Promise((r) => setTimeout(r, 1000 * (diff + 1) * 2 + 1000 * 5 * Math.random()));
+        await sleep(1000 * (diff + 1) * 2 + 1000 * 5 * Math.random())
 
         let resultHtml : string | undefined = undefined;
 

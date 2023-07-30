@@ -1,6 +1,7 @@
 import { appendValue, getValue, setValue } from "./db.js";
 
 import config from "./config.js";
+import { sleep } from "./util.js";
 
 const PREFIX = "RESULT";
 
@@ -111,9 +112,7 @@ function useStage(trace: TraceFunction) : StageFunction {
               i + 1
             }次重试`,
           });
-          await new Promise((r) => {
-            setTimeout(r, 1000);
-          });
+          await sleep(1000)
         }
       }
     }

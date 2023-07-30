@@ -42,6 +42,9 @@ function configureBot() {
     try {
       await cookieRefreshWork();
     }
+    catch (err) {
+      console.log(err)
+    }
     finally {
       cookieRefreshLock = false;
     }

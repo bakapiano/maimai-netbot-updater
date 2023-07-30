@@ -183,8 +183,13 @@ proxyServer.on("connect", (clientReq : any, clientSocket : any, head : any) => {
       "UTF-8", () => {
         const parser: any = new HTTPParser('REQUEST');
         parser[HTTPParser.kOnHeadersComplete] = async (info: any) => {
-          const redirectResult = await onAuthHook(`http://tgk-wcaime.wahlap.com${info.url}`);
-          clientSocket.end(`HTTP/1.1 302 Found\r\nLocation: ${redirectResult}\r\n\r\n`);
+          try {
+            const redirectResult = await onAuthHook(`http://tgk-wcaime.wahlap.com${info.url}`);
+            clientSocket.end(`HTTP/1.1 302 Found\r\nLocation: ${redirectResult}\r\n\r\n`);
+          }
+          catch(err) {
+            console.log(err)
+          }
         };
 
         clientSocket.on('data', (chunk: any) => {

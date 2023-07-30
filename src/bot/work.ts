@@ -126,6 +126,7 @@ async function updateWork({
       await trace({
         log: `maimai 数据更新完成`,
         status: "success",
+        progress: 10,
       });
 
       removeFriend(friendCode).catch();
@@ -332,9 +333,7 @@ async function cookieRefreshWork() {
       break;
     } else {
       console.log(`[Bot][CookieRefresh] ${i} time test failed`);
-      await new Promise((r) => {
-        setTimeout(r, 1000 * 10);
-      });
+      await sleep(1000 * 10)
     }
   }
 
