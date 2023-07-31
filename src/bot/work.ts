@@ -129,7 +129,7 @@ async function updateWork({
         progress: 10,
       });
 
-      removeFriend(friendCode).catch();
+      removeFriend(friendCode).catch(console.log);
     },
     true
   );
@@ -156,12 +156,12 @@ async function sendFriendRequestWork(data: WorkerData) {
         trace({ log: `正在尝试发送好友请求...` });
         validateFriendCodeCached(friendCode).then((result) => {
           result
-            ? [sendFriendRequest(friendCode).catch()]
+            ? [sendFriendRequest(friendCode).catch(console.log)]
             : [
                 trace({ log: "不存在的好友代码！", status: "failed" }),
                 removeFromQueue(item),
               ];
-        }).catch();
+        }).catch(console.log);
       }
       return;
     }
@@ -172,7 +172,7 @@ async function sendFriendRequestWork(data: WorkerData) {
       trace({ log: `好友请求发送成功，请在5分钟内接受！` });
     } else if (Date.now() - item.requestConfirmedTime > 1000 * 60 * 5) {
       trace({ log: `5分钟内未接受好友请求，请重试！`, status: "failed" });
-      cancelFriendRequest(friendCode).catch();
+      cancelFriendRequest(friendCode).catch(console.log);
       removeFromQueue(item);
     }
   });
@@ -196,7 +196,7 @@ async function startUpdateWork(data: WorkerData) {
         .catch(async (error) => {
           await trace({ log: `更新失败: ${String(error)}`, status: "failed" });
 
-          removeFriend(friendCode).catch();
+          removeFriend(friendCode).catch(console.log);
           removeFromQueue(item);
           await delValue(friendCode);
           console.log("[Bot][StartUpdateWork] Error: ", error);
@@ -229,7 +229,7 @@ async function acceptFriendWork(data: WorkerData) {
       ) {
         await trace({ log: `正在尝试接受好友请求...` });
         item.acceptSentTime = Date.now();
-        allowFriendRequest(friendCode).catch();
+        allowFriendRequest(friendCode).catch(console.log);
         console.log("[Bot][AcceptFriendWork] Accept friend: ", friendCode);
       }
       return;
@@ -245,7 +245,7 @@ async function cleanUpAcceptWork(data: WorkerData) {
       data.friends.includes(friendCode) ||
       !getQueue().some((item) => item.friendCode === friendCode)
     ) {
-      blockFriendRequest(friendCode).catch();
+      blockFriendRequest(friendCode).catch(console.log);
       console.log("[Bot][CleanUpAcceptWork] Block friend: ", friendCode);
     }
   });
@@ -259,7 +259,7 @@ async function cleanUpFriendWork(data: WorkerData) {
       !getQueue().some((item) => item.friendCode === friendCode) &&
       !(await getValue(friendCode))
     ) {
-      removeFriend(friendCode).catch();
+      removeFriend(friendCode).catch(console.log);
       console.log("[Bot][CleanUpFriendWork] Remove friend: ", friendCode);
     }
   });
@@ -273,7 +273,7 @@ async function cleanUpSentRequestWork(data: WorkerData) {
       data.friends.includes(friendCode) ||
       !getQueue().some((item) => item.friendCode === friendCode)
     ) {
-      cancelFriendRequest(friendCode).catch();
+      cancelFriendRequest(friendCode).catch(console.log);
       console.log("[Bot][CleanUpSentRequestWork] Cancel reqiest: ", friendCode);
     }
   });

@@ -59,7 +59,7 @@ const fetch = async (url : string, options : any | undefined = undefined, retry 
   }
 
   // Update cookie value if changed
-  updateCookie(cj).catch()
+  updateCookie(cj).catch(console.log)
 
   return result;
 };

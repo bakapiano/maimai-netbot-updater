@@ -25,10 +25,10 @@ function configureBot() {
   ];
   schedule.scheduleJob(cleanUp, () => {
     data && [
-      cleanUpAcceptWork(data).catch(),
-      cleanUpFriendWork(data).catch(),
-      cleanUpSentRequestWork(data).catch(),
-      cleanUpLongQueueTaskWork(data).catch(),
+      cleanUpAcceptWork(data).catch(console.log),
+      cleanUpFriendWork(data).catch(console.log),
+      cleanUpSentRequestWork(data).catch(console.log),
+      cleanUpLongQueueTaskWork(data).catch(console.log),
     ];
   });
 
@@ -54,21 +54,21 @@ function configureBot() {
   const prepare = new schedule.RecurrenceRule();
   prepare.second = [0, 30];
   schedule.scheduleJob(prepare, () => {
-    prepareWork().then((res) => (data = res)).catch();
+    prepareWork().then((res) => (data = res)).catch(console.log);
   });
 
   // Start update work per 30s
   const startUpdate = new schedule.RecurrenceRule();
   startUpdate.second = [29, 59];
   schedule.scheduleJob(startUpdate, () => {
-    data && startUpdateWork(data).catch();
+    data && startUpdateWork(data).catch(console.log);
   });
 
   // Start send friend request & accept friend per 30s
   const sendFriendRequest = new schedule.RecurrenceRule();
   sendFriendRequest.second = [29, 59];
   schedule.scheduleJob(sendFriendRequest, () => {
-    data && [sendFriendRequestWork(data).catch(), acceptFriendWork(data).catch()];
+    data && [sendFriendRequestWork(data).catch(console.log), acceptFriendWork(data).catch(console.log)];
   });
 
   console.log("Configure bot done!")
