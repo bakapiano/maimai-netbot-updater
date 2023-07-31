@@ -58,7 +58,7 @@ async function onAuthHook(href: string) {
     return `${protocol}://${config.host}/#/error`;
   }
 
-  const { username, password, callbackHost, diffList } = value;
+  const { username, password, callbackHost, diffList, page } = value;
   const baseHost = callbackHost || config.host
   const errorPageUrl = `${protocol}://${baseHost}/#/error`
   const traceUUID = genUUID()
@@ -74,17 +74,17 @@ async function onAuthHook(href: string) {
   // wait for first log message created, then return redirect url
   const [updateMaimaiScoreWaitLogCreate, updateChunithmScoreWaitLogCreate] = [
     updateMaimaiScore, updateChunithmScore,].map((func) => {
-      return (username : string, password : string, target : string, traceUUID : string, diffList: any) => {
+      return (username : string, password : string, target : string, traceUUID : string, diffList: any, page: boolean) => {
         return new Promise((resolve, reject) => {
-          func(username, password, target, traceUUID, diffList, resolve).catch(reject);
+          func(username, password, target, traceUUID, diffList, page, resolve).catch(reject);
         });
       };
   });
 
   if (target.includes('maimai-dx')) {
-    await updateMaimaiScoreWaitLogCreate(username, password, target, traceUUID, diffList);
+    await updateMaimaiScoreWaitLogCreate(username, password, target, traceUUID, diffList, page);
   } else if (target.includes('chunithm')) {
-    await updateChunithmScoreWaitLogCreate(username, password, target, traceUUID, diffList);
+    await updateChunithmScoreWaitLogCreate(username, password, target, traceUUID, diffList, page);
   } else { // ongeki? hahaha
     return errorPageUrl
   }

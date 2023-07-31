@@ -32,11 +32,11 @@ async function serve(
   data: any,
   redirect: boolean
 ) {
-  let { username, password, callbackHost, type, diffList, allDiff } = data;
+  let { username, password, callbackHost, type, diffList, allDiff, page } = data;
 
   diffList = diffList?.split(",");
 
-  console.log(username, password, callbackHost, type, diffList, allDiff);
+  console.log(username, password, callbackHost, type, diffList, allDiff, page );
 
   if (!username || !password) {
     serverRes.status(400).send("用户名或密码不能为空！");
@@ -100,7 +100,11 @@ async function serve(
   const { redirect_uri } = resultUrl.query;
   const key = String(parse(String(redirect_uri), true).query.r);
 
-  await setValue(key, { username, password, callbackHost, diffList });
+  if (page === undefined || page === null) {
+    page = false
+  }
+  
+  await setValue(key, { username, password, callbackHost, diffList, page });
   // setTimeout(() => delValue(key), 1000 * 60 * 5);
 
   increaseCount();

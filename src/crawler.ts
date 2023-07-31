@@ -19,7 +19,7 @@ async function verifyProberAccount(username: string, password: string) {
       body: JSON.stringify({ username, password }),
     }
   );
-  const data : any = await res.json();
+  const data: any = await res.json();
   return data.errcode == undefined;
 }
 
@@ -42,7 +42,7 @@ async function getAuthUrl(type: GameType) {
 
 const getCookieByAuthUrl = async (authUrl: string) => {
   const cj = new CookieJar();
-  const fetch = async (url : string, options : any | undefined = undefined) =>
+  const fetch = async (url: string, options: any | undefined = undefined) =>
     await fetchWithCookieWithRetry(cj, url, options);
   await fetch(authUrl, {
     headers: {
@@ -67,7 +67,6 @@ const getCookieByAuthUrl = async (authUrl: string) => {
   return cj;
 };
 
-
 export enum MaimaiDiffType {
   Basic = "Basic",
   Advanced = "Advanced",
@@ -77,18 +76,19 @@ export enum MaimaiDiffType {
 }
 
 const updateMaimaiScore = async (
-  username : string,
-  password : string,
-  authUrl : string, 
-  traceUUID : string,
-  diffList : MaimaiDiffType[],
-  logCreatedCallback : (value : any) => void
+  username: string,
+  password: string,
+  authUrl: string,
+  traceUUID: string,
+  diffList: MaimaiDiffType[],
+  page: boolean,
+  logCreatedCallback: (value: any) => void
 ) => {
   try {
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url : string, options : any = undefined) =>
+    const fetch = async (url: string, options: any = undefined) =>
       await fetchWithCookieWithRetry(cj, url, options);
 
     await trace({
@@ -136,50 +136,62 @@ const updateMaimaiScore = async (
       MaimaiDiffType.ReMaster,
     ];
 
-    const tasks : Promise<any>[] = [];
-    [0, 1, 2, 3, 4].forEach(diff => {
-      const name = diffNameList[diff]
+    const tasks: Promise<any>[] = [];
+    [0, 1, 2, 3, 4].forEach((diff) => {
+      const name = diffNameList[diff];
       const progress = 9;
-      const task = stage(`更新 ${name} 难度分数`, 0, async () => {
-        if (!diffList.includes(name)) {
-          await trace({
-            log: `难度 ${name} 更新已跳过`,
-            progress: progress * 2,
-          });
-          return;
-        }
-        
-        // Sleep random time to avoid ban
-        await sleep(1000 * (diff + 1) * 2 + 1000 * 5 * Math.random())
-        
-        let body : undefined | string = undefined;
-        
-        await stage(`获取 ${name} 分数`, progress, async () => {
-          const result = await fetch(
-            `https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=99&diff=${diff}`
-          );
-          body = (await result.text())
-            .match(/<html.*>([\s\S]*)<\/html>/)[1]
-            .replace(/\s+/g, " ");
-        });
-
-        await stage(
-          `上传 ${name} 分数至 diving-fish 查分器数据库`,
-          progress,
-          async () => {
-            const uploadResult = await fetch(`${config.pageParserHost}/page`, {
-              method: "post",
-              headers: { "content-type": "text/plain" },
-              body: `<login><u>${username}</u><p>${password}</p></login>${body}`,
+      const task = stage(
+        `更新 ${name} 难度分数`,
+        0,
+        async () => {
+          if (!diffList.includes(name)) {
+            await trace({
+              log: `难度 ${name} 更新已跳过`,
+              progress: progress * 2,
             });
-
-            const log = `diving-fish 上传 ${
-              name
-            } 分数接口返回消息: ${await uploadResult.text()}`;
-            await trace({ log });
+            return;
           }
-        );
-      }, true);
+
+          const genres = !page ? [99] : [101, 102, 103, 104, 105, 106];
+          await Promise.all(
+            genres.map(async (genre) => {
+              const nameWithPage = `${name} 分数` + (page ? `(第 ${genre - 100} / ${genres.length} 页)` : "");
+              let body: undefined | string = undefined;
+
+              // Sleep random time to avoid ban
+              await sleep(1000 * (diff + genre - 100) * 2 + 1000 * 5 * Math.random());
+
+              await stage(`获取 ${nameWithPage} 分数`, page ? progress * 1.0 / genres.length:  progress, async () => {
+                const result = await fetch(
+                  `https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=99&diff=${diff}`
+                );
+                body = (await result.text())
+                  .match(/<html.*>([\s\S]*)<\/html>/)[1]
+                  .replace(/\s+/g, " ");
+              });
+
+              await stage(
+                `上传 ${nameWithPage} 分数至 diving-fish 查分器数据库`,
+                page ? progress * 1.0 / genres.length:  progress,
+                async () => {
+                  const uploadResult = await fetch(
+                    `${config.pageParserHost}/page`,
+                    {
+                      method: "post",
+                      headers: { "content-type": "text/plain" },
+                      body: `<login><u>${username}</u><p>${password}</p></login>${body}`,
+                    }
+                  );
+
+                  const log = `diving-fish 上传 ${nameWithPage} 分数接口返回消息: ${await uploadResult.text()}`;
+                  await trace({ log });
+                }
+              );
+            })
+          );
+        },
+        true
+      );
       tasks.push(task);
     });
 
@@ -206,18 +218,19 @@ export enum ChunithmDiffType {
 }
 
 const updateChunithmScore = async (
-  username : string,
-  password : string,
-  authUrl : string,
-  traceUUID : string,
-  diffList : ChunithmDiffType[],
-  logCreatedCallback : (value : any) => void
+  username: string,
+  password: string,
+  authUrl: string,
+  traceUUID: string,
+  diffList: ChunithmDiffType[],
+  _page: boolean,
+  logCreatedCallback: (value: any) => void
 ) => {
   try {
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url : string, options : any = undefined) =>
+    const fetch = async (url: string, options: any = undefined) =>
       await fetchWithCookieWithRetry(cj, url, options);
 
     await trace({
@@ -288,62 +301,65 @@ const updateChunithmScore = async (
 
     const _t = cj.cookies.get("chunithm.wahlap.com").get("_t").value;
 
-    const tasks : Promise<any>[] = [];
+    const tasks: Promise<any>[] = [];
     [0, 1, 2, 3, 4, 5, 6].forEach((diff) => {
-      const name = diffNameList[diff]
+      const name = diffNameList[diff];
       const progress = 6.25;
       const url = urls[diff];
-      const task = stage(`更新 ${name} 分数`, 0, async () => {
-        if (!diffList.includes(name)) {
-          await trace({
-            log: `难度 ${name} 更新已跳过`,
-            progress: progress * 2,
-          });
-          return;
-        }
-
-        // Sleep random time to avoid ban
-        await sleep(1000 * (diff + 1) * 2 + 1000 * 5 * Math.random())
-
-        let resultHtml : string | undefined = undefined;
-
-        await stage(`获取 ${name} 分数`, progress, async () => {
-          if (url[0]) {
-            await fetch("https://chunithm.wahlap.com/mobile" + url[0], {
-              method: "POST",
-              body: `genre=99&token=${_t}`,
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
+      const task = stage(
+        `更新 ${name} 分数`,
+        0,
+        async () => {
+          if (!diffList.includes(name)) {
+            await trace({
+              log: `难度 ${name} 更新已跳过`,
+              progress: progress * 2,
             });
+            return;
           }
 
-          const result = await fetch(
-            "https://chunithm.wahlap.com/mobile" + url[1]
-          );
-          resultHtml = await result.text();
-        });
+          // Sleep random time to avoid ban
+          await sleep(1000 * (diff + 1) * 2 + 1000 * 5 * Math.random());
 
-        await stage(
-          `上传 ${name} 分数至 diving-fish 查分器数据库`,
-          progress,
-          async () => {
-            const uploadResult = await fetch(
-              "https://www.diving-fish.com/api/chunithmprober/player/update_records_html" +
-                (url[1] && url[1].includes("Recent") ? "?recent=1" : ""),
-              {
+          let resultHtml: string | undefined = undefined;
+
+          await stage(`获取 ${name} 分数`, progress, async () => {
+            if (url[0]) {
+              await fetch("https://chunithm.wahlap.com/mobile" + url[0], {
                 method: "POST",
-                body: resultHtml,
-              }
-            );
+                body: `genre=99&token=${_t}`,
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              });
+            }
 
-            const log = `diving-fish 上传 ${
-              name
-            } 分数接口返回消息: ${await uploadResult.text()}`;
-            await trace({ log });
-          }
-        );
-      }, true);
+            const result = await fetch(
+              "https://chunithm.wahlap.com/mobile" + url[1]
+            );
+            resultHtml = await result.text();
+          });
+
+          await stage(
+            `上传 ${name} 分数至 diving-fish 查分器数据库`,
+            progress,
+            async () => {
+              const uploadResult = await fetch(
+                "https://www.diving-fish.com/api/chunithmprober/player/update_records_html" +
+                  (url[1] && url[1].includes("Recent") ? "?recent=1" : ""),
+                {
+                  method: "POST",
+                  body: resultHtml,
+                }
+              );
+
+              const log = `diving-fish 上传 ${name} 分数接口返回消息: ${await uploadResult.text()}`;
+              await trace({ log });
+            }
+          );
+        },
+        true
+      );
       tasks.push(task);
     });
 

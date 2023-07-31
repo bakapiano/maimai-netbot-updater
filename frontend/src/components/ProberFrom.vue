@@ -35,6 +35,9 @@
                   </n-space>
                 </n-checkbox-group>
               </n-form-item>
+              <n-form-item path="page" label="分页更新（高峰时段使用可提高更新成功率）">
+                <n-switch v-model:value="formValue.page" :default-value="false" />
+              </n-form-item>
               <n-form-item label="记住账号密码">
                 <n-switch v-model:value="remember" @change="rememberChange" />
               </n-form-item>
@@ -92,6 +95,7 @@ const formValue = ref({
     'Master',
     'Re:Master',
   ],
+  page: false,
 })
 const remember = ref(false)
 const rules = ref({
@@ -107,6 +111,10 @@ const rules = ref({
     required: true,
     message: '请选择更新难度',
   },
+  page: {
+    required: true,
+    message: "请选择是否使用分页更新"
+  }
 })
 const shortCut = ref('')
 const showModal = ref(false)
@@ -167,6 +175,7 @@ async function genShortcut(type) {
       : null
   )}`
   url += `&type=${encodeURIComponent(type)}`
+  url += `&page=${encodeURIComponent(formValue.value.page)}`
   console.log(url)
   shortCut.value = url
 }
@@ -180,7 +189,8 @@ async function post(type, jump = true) {
       type,
       formValue.value.diffList !== undefined
         ? formValue.value.diffList.join()
-        : null
+        : null,
+      formValue.value.page
     )
     console.log(result.data)
     saveToLocalStorage()
