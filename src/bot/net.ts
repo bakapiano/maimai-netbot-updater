@@ -35,13 +35,6 @@ const doFetch = async (
   retry: number = 1,
   fetchTimeout: number = 1000 * 30
 ) : Promise<any> => { 
-  // TODO: change this to queue
-  do {
-    await sleep(Math.random() * 1000 * 3 + 2000);
-    console.log("[Bot][Fetch] Sleep random 2 - 5 seconds");
-  } while (new Date().getTime() - lastFetchTime < 1000 * 2);
-  lastFetchTime = new Date().getTime();
-
   const cj = await loadCookie();
 
   // Auto add token to POST body
