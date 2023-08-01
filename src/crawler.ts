@@ -124,7 +124,9 @@ const updateMaimaiScore = async (
       const body = await result.text();
 
       if (body.match("错误")) {
-        throw new Error("登录公众号时出现错误");
+        const errroCode = (body.match(/<div class="p_5 f_14 ">(.*)<\/div>/) ?? [])[1];
+        const errorBody = (body.match(/<div class="p_5 f_12 gray break">(.*)<\/div>/) ?? [])[1];
+        throw new Error("登录公众号时出现错误 " + errroCode + " " + errorBody);
       }
     });
 
