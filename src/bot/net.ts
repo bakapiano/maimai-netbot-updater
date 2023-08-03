@@ -26,7 +26,7 @@ setInterval(() => {
   console.log("[Bot][Fetch] Queue length:", queue.length);
   const { url, options, retry, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(url, options, retry, fetchTimeout).then(resolve).catch(reject);
-}, 1000);
+}, 150);
 
 const doFetch = async (
   url: string,
@@ -84,7 +84,7 @@ const doFetch = async (
 
     return await new Promise((resolve, reject) => {
       sleep(1000 * 15).then(() =>
-        doFetch(url, options, retry + 1, fetchTimeout)
+        fetch(url, options, retry + 1, fetchTimeout)
           .then(resolve)
           .catch(reject)
       );
