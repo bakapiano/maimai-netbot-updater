@@ -34,7 +34,7 @@ const config = {
 const serverHost = process.argv.slice(2)[0];
 if (serverHost !== undefined) {
   config.host = serverHost;
-  config.dev || ["127.0.0.1", "localhost"].includes(serverHost);
+  if (["127.0.0.1", "localhost"].includes(serverHost)) config.dev = true
 }
 
 // console.log(`SERVER_HOST=${serverHost}`);

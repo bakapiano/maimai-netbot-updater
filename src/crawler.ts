@@ -67,6 +67,10 @@ const getCookieByAuthUrl = async (authUrl: string) => {
   return cj;
 };
 
+export interface PageInfo {
+  pageType: "A" | "G" | "W"
+}
+
 export enum MaimaiDiffType {
   Basic = "Basic",
   Advanced = "Advanced",
@@ -81,7 +85,7 @@ const updateMaimaiScore = async (
   authUrl: string,
   traceUUID: string,
   diffList: MaimaiDiffType[],
-  page: boolean,
+  pageInfo: Map<MaimaiDiffType, PageInfo>,
   logCreatedCallback: (value: any) => void
 ) => {
   try {
@@ -153,19 +157,29 @@ const updateMaimaiScore = async (
             });
             return;
           }
-
-          const genres = !page ? [99] : [101, 102, 103, 104, 105, 106];
+          
+          const pageType = pageInfo[name].pageType ?? "A";
+          const pages : any[] =
+                pageType === "A"
+              ? [undefined]
+              : pageType === "G"
+              ? [101, 102, 103, 104, 105, 106]
+              : pageType === "W"
+              ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+              : [undefined];
+          
           await Promise.all(
-            genres.map(async (genre) => {
-              const nameWithPage = `${name}` + (page ? `(第 ${genre - 100} / ${genres.length} 页)` : "");
+            pages.map(async (page, index) => {
+              const nameWithPage = `${name}` + (`(第 ${index + 1} / ${pages.length} 页)`);
               let body: undefined | string = undefined;
 
               // Sleep random time to avoid ban
-              await sleep(1000 * (diff + genre - 100) * 2 + 1000 * 5 * Math.random());
+              await sleep(1000 * (diff + index + 1) * 2 + 1000 * 5 * Math.random());
 
-              await stage(`获取 ${nameWithPage} 分数`, page ? progress * 1.0 / genres.length:  progress, async () => {
+              await stage(`获取 ${nameWithPage} 分数`, progress * 1.0 / pages.length, async () => {
                 const result = await fetch(
-                  `https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=${genre}&diff=${diff}`
+                  `https://maimai.wahlap.com/maimai-mobile/record/musicSort/search/?search=${pageType + page !== undefined ? `${page}`: ""}&sort=1&playCheck=on&diff=${diff}`
+                  // `https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=${genre}&diff=${diff}`
                 );
                 body = (await result.text())
                   .match(/<html.*>([\s\S]*)<\/html>/)[1]
@@ -174,7 +188,7 @@ const updateMaimaiScore = async (
 
               await stage(
                 `上传 ${nameWithPage} 分数至 diving-fish 查分器数据库`,
-                page ? progress * 1.0 / genres.length:  progress,
+                progress * 1.0 / pages.length,
                 async () => {
                   const uploadResult = await fetch(
                     `${config.pageParserHost}/page`,
@@ -201,7 +215,7 @@ const updateMaimaiScore = async (
 
     await trace({
       log: "maimai 数据更新完成",
-      progress: 0,
+      progress: 100,
       status: "success",
     });
   } catch (err) {
@@ -225,7 +239,7 @@ const updateChunithmScore = async (
   authUrl: string,
   traceUUID: string,
   diffList: ChunithmDiffType[],
-  _page: boolean,
+  _pageInfo: any, // TODO: Support paging for chunithm
   logCreatedCallback: (value: any) => void
 ) => {
   try {
@@ -369,7 +383,7 @@ const updateChunithmScore = async (
 
     await trace({
       log: "chunithm 数据更新完成",
-      progress: 6.25,
+      progress: 100,
       status: "success",
     });
   } catch (err) {

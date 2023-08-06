@@ -4,4 +4,8 @@ async function getTrace(uuid) {
   return await httpRequest.get('/trace', { params: { uuid } })
 }
 
-export { getTrace }
+async function quickRetry(uuid) {
+  return await httpRequest.post('/retry', { uuid })
+}
+
+export { getTrace, quickRetry }

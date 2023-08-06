@@ -22,7 +22,7 @@ async function appendLog(uuid: string, text: string) {
 async function setProgress(uuid: string, progress: number) {
   const key = `${PREFIX}-${uuid}-${PROGRESS_KEY}`;
   const current = Number(await getValue(key)) || 0;
-  await setValue(key, current + progress);
+  await setValue(key, Math.min(100, current + progress));
 }
 
 async function setStatus(uuid: string, status: string) {

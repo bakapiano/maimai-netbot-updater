@@ -1,5 +1,6 @@
 import "express-async-errors";
 
+import { MaimaiDiffType, PageInfo, getAuthUrl, verifyProberAccount } from "./crawler.js";
 import {
   appendQueue,
   delValue,
@@ -9,7 +10,6 @@ import {
   removeFromQueueByFriendCode,
   setValue,
 } from "./db.js";
-import { getAuthUrl, verifyProberAccount } from "./crawler.js";
 import { getTrace, useTrace } from "./trace.js";
 
 import bodyParser from "body-parser";
@@ -32,11 +32,11 @@ async function serve(
   data: any,
   redirect: boolean
 ) {
-  let { username, password, callbackHost, type, diffList, allDiff, page } = data;
+  let { username, password, callbackHost, type, diffList, allDiff, page, pageInfo } = data;
 
-  diffList = diffList?.split(",");
+  if (typeof diffList === "string") diffList = diffList?.split(",");
 
-  console.log(username, password, callbackHost, type, diffList, allDiff, page );
+  console.log(username, password, callbackHost, type, diffList, allDiff, page, pageInfo );
 
   if (!username || !password) {
     serverRes.status(400).send("用户名或密码不能为空！");
@@ -100,19 +100,55 @@ async function serve(
   const { redirect_uri } = resultUrl.query;
   const key = String(parse(String(redirect_uri), true).query.r);
 
-  if (page === undefined || page === null) {
-    page = false
+  const defaultMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
+  defaultMaimaiPageInfo["Basic"]     = { pageType: "W" }
+  defaultMaimaiPageInfo["Advanced"]  = { pageType: "W" }
+  defaultMaimaiPageInfo["Expert"]    = { pageType: "W" }
+  defaultMaimaiPageInfo["Master"]    = { pageType: "W" }
+  defaultMaimaiPageInfo["Re:Master"] = { pageType: "T" }
+
+  const disabledMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
+  disabledMaimaiPageInfo["Basic"]     = { pageType: "A"}
+  disabledMaimaiPageInfo["Advanced"]  = { pageType: "A"}
+  disabledMaimaiPageInfo["Expert"]    = { pageType: "A"}
+  disabledMaimaiPageInfo["Master"]    = { pageType: "A"}
+  disabledMaimaiPageInfo["Re:Master"] = { pageType: "A"}
+
+  // 兼容旧版 page 短链接
+  if ((page !== undefined || page !== null) && (pageInfo === undefined || pageInfo === null) && type === "maimai-dx") {
+    pageInfo = page === true ? defaultMaimaiPageInfo : disabledMaimaiPageInfo;
+  }
+
+  if ((pageInfo === undefined || pageInfo === null) && type === "maimai-dx") {
+    pageInfo = defaultMaimaiPageInfo
   }
   
-  await setValue(key, { username, password, callbackHost, diffList, page });
-  // setTimeout(() => delValue(key), 1000 * 60 * 5);
-
+  await setValue(key, { username, password, callbackHost, diffList, pageInfo });
+  
   increaseCount();
 
   redirect === true
     ? serverRes.redirect(href)
     : serverRes.status(200).send(href);
 }
+
+app.post("/retry", jsonParser, async (serverReq: any, serverRes: any) => {
+  const uuid = serverReq.body?.uuid
+  if (typeof uuid !== "string" || uuid === "") {
+    serverRes.status(400).send("请提供uuid")
+    return
+  }
+  
+  const data = await getValue(uuid)
+  if (!data) {
+    serverRes.status(400).send("uuid 不存在")
+    return
+  }
+
+  console.log(data)
+
+  return await serve(serverReq, serverRes, data, false);
+});
 
 app.post("/auth", jsonParser, async (serverReq: any, serverRes: any) => {
   return await serve(serverReq, serverRes, serverReq.body, false);
@@ -220,6 +256,8 @@ if (config.bot.enable) {
       traceUUID,
       createTime: Date.now(),
     });
+
+    increaseCount();
 
     redirect
       ? serverRes.redirect(tracePageUrl)

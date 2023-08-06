@@ -2,8 +2,8 @@ import * as http from "http";
 import * as net from "net";
 import * as url from "url";
 
-import { delValue, getValue } from "./db.js";
-import { getCookieByAuthUrl, updateChunithmScore, updateMaimaiScore } from "./crawler.js";
+import { MaimaiDiffType, PageInfo, getCookieByAuthUrl, updateChunithmScore, updateMaimaiScore } from "./crawler.js";
+import { delValue, getValue, setValue } from "./db.js";
 
 import { HTTPParser } from "http-parser-js";
 import config from "./config.js";
@@ -58,13 +58,16 @@ async function onAuthHook(href: string) {
     return `${protocol}://${config.host}/#/error`;
   }
 
-  const { username, password, callbackHost, diffList, page } = value;
+  const { username, password, callbackHost, diffList, pageInfo } = value;
   const baseHost = callbackHost || config.host
   const errorPageUrl = `${protocol}://${baseHost}/#/error`
   const traceUUID = genUUID()
   const tracePageUrl = `${protocol}://${baseHost}/#/trace/${traceUUID}/`
 
   delValue(key);
+
+  // Save data with traceUUID as key to support retry
+  await setValue(traceUUID, value);
 
   console.log(username, password, baseHost)
   if (!username || !password) {
@@ -73,18 +76,18 @@ async function onAuthHook(href: string) {
   
   // wait for first log message created, then return redirect url
   const [updateMaimaiScoreWaitLogCreate, updateChunithmScoreWaitLogCreate] = [
-    updateMaimaiScore, updateChunithmScore,].map((func) => {
-      return (username : string, password : string, target : string, traceUUID : string, diffList: any, page: boolean) => {
+    updateMaimaiScore, updateChunithmScore].map((func, index) => {
+      return (username : string, password : string, target : string, traceUUID : string, diffList: any, pageInfo: Map<MaimaiDiffType, PageInfo> | undefined) => {
         return new Promise((resolve, reject) => {
-          func(username, password, target, traceUUID, diffList, page, resolve).catch(reject);
+          func(username, password, target, traceUUID, diffList, index === 0 ? pageInfo : undefined, resolve).catch(reject);
         });
       };
   });
 
   if (target.includes('maimai-dx')) {
-    await updateMaimaiScoreWaitLogCreate(username, password, target, traceUUID, diffList, page);
+    await updateMaimaiScoreWaitLogCreate(username, password, target, traceUUID, diffList, pageInfo);
   } else if (target.includes('chunithm')) {
-    await updateChunithmScoreWaitLogCreate(username, password, target, traceUUID, diffList, page);
+    await updateChunithmScoreWaitLogCreate(username, password, target, traceUUID, diffList, undefined);
   } else { // ongeki? hahaha
     return errorPageUrl
   }

@@ -1,5 +1,5 @@
 <template>
-  <n-spin :show="loadingFirstTrace">
+  <n-spin :show="loading">
     <n-card title="更新结果">
       <template v-if="error">
         <n-result status="error" title="未找到更新记录" :description="`UUID: ${uuid}`" />
@@ -12,7 +12,7 @@
               {{ uuid }}
             </n-tag>
           </div>
-          <div class="log">
+          <div class="log" :style="{maxHeight: `${height - 380}px`}">
             <TransitionGroup name="list">
               <n-text v-for="line in data?.log?.split('\n')" :key="line" tag="div">
                 {{ line || '' }}
@@ -29,38 +29,88 @@
       </template>
       <n-progress v-if="!error" type="line" :status="{ running: 'info', success: 'success', failed: 'error' }[
         data?.status || 'running'
-        ]
+      ]
         " :percentage="data?.progress || 0" :show-indicator="false" :processing="data?.status === 'running'"
         :indicator-placement="'inside'" />
-      <template v-if="isBotTrace" #action>
-        <n-button type="primary" :on-click="copyFriendCode">
-          复制好友代码
-        </n-button> 
+      <template v-if="!error" #action>
+        <n-space>
+          <n-button v-if="isBotTrace" type="primary" :on-click="copyFriendCode">
+            复制好友代码
+          </n-button>
+          <n-button v-if="!isBotTrace" type="info" :on-click="quickRetry">
+            快速重试
+          </n-button>
+        </n-space>
       </template>
-      </n-card>
+    </n-card>
   </n-spin>
 </template>
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getTrace } from '../api/trace.js'
-import { useMessage } from 'naive-ui'
+import { getTrace, quickRetry as postQuickRetry } from '../api/trace.js'
+import { useMessage, useDialog } from 'naive-ui'
+import { checkProxySettingStatus } from '../api/proxy.js'
 
 const MAX_FETCH_COUNT = 5
 
 const route = useRoute()
 const message = useMessage()
+const dialog = useDialog()
 
 const data = ref(undefined)
-const loadingFirstTrace = ref(true)
+const loading = ref(true)
 const error = ref(false)
 const inProgress = ref(true)
 const isBotTrace = window.location.href.indexOf("isBot=true") > -1
+const height = window.innerHeight
+console.log(height)
 
 const { uuid } = route.params
 let intervalId = null
-let failedFetchCount = 0 
+let failedFetchCount = 0
+
+async function quickRetry() {
+  if (!isBotTrace) {
+    const post = async () => {
+      try {
+        loading.value = true
+        const result = await postQuickRetry(uuid)
+        window.location.href = result.data
+      } catch (err) {
+        message.error(err.response?.data ?? "快速重试失败")
+      }
+      finally {
+        loading.value = false
+      }
+    }
+
+    let result = false;
+    try {
+      loading.value = true
+      result = await checkProxySettingStatus()
+    }
+    finally {
+      loading.value = false
+    }
+
+    if (!result)
+      dialog.warning({
+        title: 'Warning',
+        content: '代理配置存在问题，可能会导致数据更新不成功，是否继续？',
+        negativeText: '取消',
+        positiveText: '继续',
+        onPositiveClick: post,
+        autoFocus: false,
+      })
+    else post()
+  }
+  else {
+    // TODO: Support retry for bot
+    message.error('暂不支持 Bot 数据更新重试')
+  }
+}
 
 function copyFriendCode() {
   navigator.clipboard.writeText('413252453611467')
@@ -91,15 +141,15 @@ onMounted(
         if (data.value?.status == 'failed' || data.value?.status == 'success') {
           inProgress.value = false
         }
-        if (loadingFirstTrace.value) {
-          loadingFirstTrace.value = false
+        if (loading.value) {
+          loading.value = false
         }
-      } else if (loadingFirstTrace.value) {
+      } else if (loading.value) {
         failedFetchCount += 1
         if (failedFetchCount >= MAX_FETCH_COUNT) {
           message.error(`未找到 ${uuid}`)
           inProgress.value = false
-          loadingFirstTrace.value = false
+          loading.value = false
           error.value = true
         }
       }
@@ -120,7 +170,6 @@ onMounted(
 }
 
 .log {
-  max-height: 480px;
   overflow-y: auto;
 }
 </style>
