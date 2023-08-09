@@ -1,9 +1,35 @@
-import { fetchWithCookieWithRetry, sleep } from "./util.js";
+import { fetchWithCookieWithRetry as doFetch, sleep } from "./util.js";
 import { useStage, useTrace } from "./trace.js";
 
 import { CookieJar } from "node-fetch-cookies";
 import config from "./config.js";
 import fetch from "node-fetch";
+
+var queue: any[] = [];
+const fetchWithCookieWithRetry = async (
+  cj: CookieJar,
+  url: string,
+  options: any | undefined = undefined,
+  fetchTimeout: number = 1000 * 30
+) : Promise<any> => {
+  return await new Promise((resolve, reject) => {
+    queue.push({
+      cj,
+      url,
+      options,
+      fetchTimeout,
+      resolve,
+      reject,
+    });
+  });
+};
+
+setInterval(() => {
+  if (queue.length === 0) return;
+  console.log("[Crawler][Fetch] Queue length:", queue.length);
+  const { cj, url, options, fetchTimeout, resolve, reject } = queue.shift();
+  doFetch(cj, url, options, fetchTimeout).then(resolve).catch(reject);
+}, 1000);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
