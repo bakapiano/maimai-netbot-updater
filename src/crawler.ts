@@ -92,7 +92,7 @@ const updateMaimaiScore = async (
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3) =>
+    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3 * 60) =>
       await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
@@ -256,7 +256,7 @@ const updateChunithmScore = async (
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3) =>
+    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3 * 60) =>
       await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
