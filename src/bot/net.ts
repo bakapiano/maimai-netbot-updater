@@ -25,11 +25,11 @@ const fetch = async (
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Bot][Fetch] Queue length:", queue.length);
-  if (queue.length >= 60) lock("fetch-queue")
+  if (queue.length >= 30) lock("fetch-queue")
   else release("fetch-queue")
   const { url, options, retry, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(url, options, retry, fetchTimeout).then(resolve).catch(reject);
-}, 1000);
+}, 2000);
 
 const doFetch = async (
   url: string,
