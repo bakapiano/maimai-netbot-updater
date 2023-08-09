@@ -1,6 +1,6 @@
 import "express-async-errors";
 
-import { MaimaiDiffType, PageInfo, getAuthUrl, verifyProberAccount } from "./crawler.js";
+import { MaimaiDiffType, PageInfo, getAuthUrl, lock, verifyProberAccount } from "./crawler.js";
 import {
   appendQueue,
   delValue,
@@ -32,6 +32,12 @@ async function serve(
   data: any,
   redirect: boolean
 ) {
+  if (lock) {
+    console.log("[Crawler] Hit Lock")
+    serverRes.status(400).send("同时使用人数过多，请稍后再试！");
+    return;
+  }
+  
   let { username, password, callbackHost, type, diffList, allDiff, page, pageInfo } = data;
 
   if (typeof diffList === "string") diffList = diffList?.split(",");
@@ -229,6 +235,7 @@ if (config.bot.enable) {
     }
 
     if (isLock()) {
+      console.log("[Bot] Hit Lock")
       serverRes.status(400).send("Bot 同时使用人数过多，请稍后再试！");
       return;
     }

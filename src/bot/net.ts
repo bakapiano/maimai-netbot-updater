@@ -29,7 +29,7 @@ setInterval(() => {
   else release("fetch-queue")
   const { url, options, retry, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(url, options, retry, fetchTimeout).then(resolve).catch(reject);
-}, 500);
+}, 1000);
 
 const doFetch = async (
   url: string,

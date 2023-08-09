@@ -5,6 +5,8 @@ import { CookieJar } from "node-fetch-cookies";
 import config from "./config.js";
 import fetch from "node-fetch";
 
+var lock = false
+
 var queue: any[] = [];
 const fetchWithCookieWithRetry = async (
   cj: CookieJar,
@@ -27,9 +29,11 @@ const fetchWithCookieWithRetry = async (
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Crawler][Fetch] Queue length:", queue.length);
+  if (queue.length >= 60) lock = true
+  else lock = false
   const { cj, url, options, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(cj, url, options, fetchTimeout).then(resolve).catch(reject);
-}, 500);
+}, 1000);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
@@ -445,4 +449,5 @@ export {
   updateChunithmScore,
   getAuthUrl,
   getCookieByAuthUrl,
+  lock,
 };
