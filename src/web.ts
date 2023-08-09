@@ -101,11 +101,11 @@ async function serve(
   const key = String(parse(String(redirect_uri), true).query.r);
 
   const defaultMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
-  defaultMaimaiPageInfo["Basic"]     = { pageType: "W" }
-  defaultMaimaiPageInfo["Advanced"]  = { pageType: "W" }
-  defaultMaimaiPageInfo["Expert"]    = { pageType: "W" }
-  defaultMaimaiPageInfo["Master"]    = { pageType: "W" }
-  defaultMaimaiPageInfo["Re:Master"] = { pageType: "T" }
+  defaultMaimaiPageInfo["Basic"]     = { pageType: "G" }
+  defaultMaimaiPageInfo["Advanced"]  = { pageType: "G" }
+  defaultMaimaiPageInfo["Expert"]    = { pageType: "G" }
+  defaultMaimaiPageInfo["Master"]    = { pageType: "G" }
+  defaultMaimaiPageInfo["Re:Master"] = { pageType: "A" }
 
   const disabledMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
   disabledMaimaiPageInfo["Basic"]     = { pageType: "A"}
