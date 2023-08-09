@@ -29,7 +29,7 @@ setInterval(() => {
   console.log("[Crawler][Fetch] Queue length:", queue.length);
   const { cj, url, options, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(cj, url, options, fetchTimeout).then(resolve).catch(reject);
-}, 1000);
+}, 500);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
@@ -130,7 +130,7 @@ const updateMaimaiScore = async (
     logCreatedCallback(undefined);
 
     await stage("登录公众号", 10, async () => {
-      await fetch(authUrl, {
+      await doFetch(cj, authUrl, {
         headers: {
           Host: "tgk-wcaime.wahlap.com",
           Connection: "keep-alive",
@@ -148,7 +148,8 @@ const updateMaimaiScore = async (
         },
       });
 
-      const result = await fetch(
+      const result = await doFetch(
+        cj,
         "https://maimai.wahlap.com/maimai-mobile/home/"
       );
       const body = await result.text();
@@ -294,7 +295,7 @@ const updateChunithmScore = async (
     logCreatedCallback(undefined);
 
     await stage("登录公众号", 6.25, async () => {
-      const authResult = await fetch(authUrl, {
+      const authResult = await doFetch(cj, authUrl, {
         headers: {
           Connection: "keep-alive",
           "Upgrade-Insecure-Requests": "1",
