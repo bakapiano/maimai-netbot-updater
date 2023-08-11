@@ -9,8 +9,8 @@ import fetch from "node-fetch";
 const configureWorker = () => {
   console.log(`Worker enabled`);
   const getWork = new schedule.RecurrenceRule();
-  // every second
-  getWork.second = [...Array.from({ length: 60 }, (_, i) => i)];
+  // Every 2 second
+  getWork.second = [...Array.from({ length: 60 }, (_, i) => i)].filter(i => i % 2 === 0);
   schedule.scheduleJob(getWork, async () => {
     const url = `${config.worker.task}?token=${config.authToken}`;
     let res = await fetch(url);
