@@ -6,8 +6,26 @@ import config from "./config.js";
 import fetch from "node-fetch";
 
 var lock = false
-
 var queue: any[] = [];
+
+const fetchWithCookieWithRetryHighPriority = async (
+  cj: CookieJar,
+  url: string,
+  options: any | undefined = undefined,
+  fetchTimeout: number = 1000 * 60
+) : Promise<any> => {
+  return await new Promise((resolve, reject) => {
+    queue.unshift({
+      cj,
+      url,
+      options,
+      fetchTimeout,
+      resolve,
+      reject,
+    });
+  });
+};
+
 const fetchWithCookieWithRetry = async (
   cj: CookieJar,
   url: string,
@@ -29,13 +47,13 @@ const fetchWithCookieWithRetry = async (
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Crawler][Fetch] Queue length:", queue.length);
-  if (queue.length >= 60) lock = true
+  if (queue.length >= 45) lock = true
   else lock = false
   const { cj, url, options, fetchTimeout, resolve, reject } = queue.shift();
   doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
     reject?.(e)
   });
-}, 1000);
+}, 1500);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
@@ -123,7 +141,7 @@ const updateMaimaiScore = async (
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3 * 60) =>
+    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 5 * 60) =>
       await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
@@ -133,7 +151,7 @@ const updateMaimaiScore = async (
     });
 
     await stage("登录公众号", 10, async () => {
-      await doFetch(cj, authUrl, {
+      await fetchWithCookieWithRetryHighPriority(cj, authUrl, {
         headers: {
           Host: "tgk-wcaime.wahlap.com",
           Connection: "keep-alive",
@@ -151,7 +169,7 @@ const updateMaimaiScore = async (
         },
       });
 
-      const result = await doFetch(
+      const result = await fetchWithCookieWithRetryHighPriority(
         cj,
         "https://maimai.wahlap.com/maimai-mobile/home/"
       );
@@ -285,7 +303,7 @@ const updateChunithmScore = async (
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 3 * 60) =>
+    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 5 * 60) =>
       await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
@@ -295,7 +313,7 @@ const updateChunithmScore = async (
     });
 
     await stage("登录公众号", 6.25, async () => {
-      const authResult = await doFetch(cj, authUrl, {
+      const authResult = await fetchWithCookieWithRetryHighPriority(cj, authUrl, {
         headers: {
           Connection: "keep-alive",
           "Upgrade-Insecure-Requests": "1",
