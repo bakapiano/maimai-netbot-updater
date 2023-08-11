@@ -31,7 +31,6 @@ const WHITE_LIST = [
 function checkHostInWhiteList(target: string | null) {
   if (!target) return false;
   target = target.split(":")[0];
-  console.log(WHITE_LIST.find((value) => value === target) !== undefined, target, WHITE_LIST)
   return WHITE_LIST.find((value) => value === target) !== undefined;
 }
 
@@ -56,13 +55,7 @@ async function httpOptions(clientReq : any, clientRes : any) {
     return;
   }
 
-  console.log(reqUrl.hostname)
-  console.log(reqUrl.port)
-  console.log(reqUrl.path)
-
   const path = `http://${reqUrl.hostname}:${reqUrl.port || ""}${reqUrl.path}`
-
-  console.log(path)
 
   var options = {
     hostname: config.interProxy.targetHost,
