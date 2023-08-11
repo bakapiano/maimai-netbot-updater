@@ -15,13 +15,10 @@ const fetchWithCookieWithRetryHighPriority = async (
   fetchTimeout: number = 1000 * 60
 ) : Promise<any> => {
   return await new Promise((resolve, reject) => {
-    queue.unshift({
-      cj,
-      url,
-      options,
-      fetchTimeout,
-      resolve,
-      reject,
+    // Do fetch and put a place hold to queue
+    queue.unshift(undefined)
+    doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
+      reject?.(e)
     });
   });
 };
@@ -47,12 +44,19 @@ const fetchWithCookieWithRetry = async (
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Crawler][Fetch] Queue length:", queue.length);
-  if (queue.length >= 45) lock = true
+  if (queue.length >= 30) lock = true
   else lock = false
-  const { cj, url, options, fetchTimeout, resolve, reject } = queue.shift();
-  doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
-    reject?.(e)
-  });
+  try {
+    const data = queue.shift();
+    if (!data) return
+    const { cj, url, options, fetchTimeout, resolve, reject } = data
+    doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
+      reject?.(e)
+    });
+  }
+  catch (e) {
+    console.error("[Crawler][Fetch] Start do fetch error:", e);
+  }
 }, 2000);
 
 async function verifyProberAccount(username: string, password: string) {
