@@ -53,7 +53,7 @@ setInterval(() => {
   doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
     reject?.(e)
   });
-}, 1500);
+}, 2000);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
