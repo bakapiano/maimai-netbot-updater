@@ -293,21 +293,26 @@ var taskQueue : Task[] = []
 var pendingQueue : Task[] = []
 
 function appendTask(data, type: GameType) {
-  const uuid = genUUID()
-  taskQueue.push({uuid, data, type})
-} 
+  const { traceUUID } = data
+  taskQueue.push({uuid: traceUUID, data, type})
+  console.log("[Worker] Append Task", traceUUID, data)
+  console.log("[Worker] Task Queue Length", taskQueue.length)
+}
 
 app.get("/task/", validateToken(async (serverReq: any, serverRes: any) => {
   const task = taskQueue.shift()
   if (task) {
     pendingQueue.push(task)
     serverRes.send(JSON.stringify(task))
-    // If not ack in 30s, put it back to task queue
+    // If not ack in 5s, put it back to task queue
     setTimeout(() => {
       const { uuid } = task
-      pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid)
-      taskQueue.push(task)
-    }, 1000 * 30)
+      if (pendingQueue.find((task) => task.uuid === uuid)) {
+        console.log("[Worker] Task not ack in 5s, put it back to task queue", uuid)
+        pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid)
+        taskQueue.push(task)
+      }
+    }, 1000 * 5)
   }
   else {
     serverRes.status(400).send("No task")
@@ -318,7 +323,9 @@ app.post("/task/:uuid/", jsonParser, validateToken(async (serverReq: any, server
   const { uuid } = serverReq.params;
   const task = pendingQueue.find((task) => task.uuid === uuid)
   if (task) {
+    console.log("[Worker ]Task ack", uuid)
     pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid)
+    serverRes.status(200).send("OK")
   }
   else {
     serverRes.status(400).send("Task not found")
