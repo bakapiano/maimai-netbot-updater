@@ -44,7 +44,7 @@ const fetchWithCookieWithRetry = async (
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Crawler][Fetch] Queue length:", queue.length);
-  if (queue.length >= 30) lock = true
+  if (queue.length >= 60) lock = true
   else lock = false
   try {
     const data = queue.shift();
@@ -482,4 +482,5 @@ export {
   getAuthUrl,
   getCookieByAuthUrl,
   lock,
+  queue,
 };

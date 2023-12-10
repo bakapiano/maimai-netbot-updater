@@ -76,7 +76,7 @@ async function onAuthHook(href: string) {
     return errorPageUrl;
   }
   
-  await appendLog(traceUUID, "");
+  await appendLog(traceUUID, "已成功 hook 到登录请求，请稍后...");
 
   const data = {
     username,

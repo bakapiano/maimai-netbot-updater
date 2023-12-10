@@ -1,6 +1,6 @@
 import "express-async-errors";
 
-import { GameType, MaimaiDiffType, PageInfo, getAuthUrl, lock, verifyProberAccount } from "./crawler.js";
+import { GameType, MaimaiDiffType, PageInfo, getAuthUrl, verifyProberAccount } from "./crawler.js";
 import {
   appendQueue,
   delValue,
@@ -32,8 +32,8 @@ async function serve(
   data: any,
   redirect: boolean
 ) {
-  if (lock) {
-    console.log("[Crawler] Hit Lock")
+  if (taskQueue.length >= 30) {
+    console.log(`[Worker API] ${taskQueue.length} task queue length reached, hit lock!`)
     serverRes.status(400).send("同时使用人数过多，请稍后再试！");
     return;
   }
@@ -287,14 +287,13 @@ if (config.bot.enable) {
 }
 
 // Worker api
-
-export type Task = {uuid: string, data : any, type: GameType}
+export type Task = {uuid: string, data : any, type: GameType, appendTime: number}
 var taskQueue : Task[] = []
 var pendingQueue : Task[] = []
 
 function appendTask(data, type: GameType) {
   const { traceUUID } = data
-  taskQueue.push({uuid: traceUUID, data, type})
+  taskQueue.push({uuid: traceUUID, data, type, appendTime: Date.now()})
   console.log("[Worker] Append Task", traceUUID, data)
   console.log("[Worker] Task Queue Length", taskQueue.length)
 }
