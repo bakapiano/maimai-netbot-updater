@@ -425,10 +425,10 @@ const updateChunithmScore = async (
 
             if (result.url.indexOf("error") !== -1) {
               const text = await result.text();
-              const errroCode = text.match(/<div class="p_5 f_14 ">(.*)<\/div>/)[1];
+              const errroCode = text.match(/<div class="p_5 f_14 ">(.*)<\/div>/)?.[1];
               const errorBody = text.match(
                 /<div class="p_5 f_12 gray break">(.*)<\/div>/
-              )[1];
+              )?.[1];
 
               throw Error("Error code " + errroCode + " Error Body" + errorBody);
             }
