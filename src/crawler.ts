@@ -4,8 +4,9 @@ import { useStage, useTrace } from "./trace.js";
 import { CookieJar } from "node-fetch-cookies";
 import config from "./config.js";
 import fetch from "node-fetch";
+import { getCookieValue } from "./bot/cookie.js";
 
-var lock = false
+var lock = false;
 var queue: any[] = [];
 
 const fetchWithCookieWithRetryHighPriority = async (
@@ -13,13 +14,15 @@ const fetchWithCookieWithRetryHighPriority = async (
   url: string,
   options: any | undefined = undefined,
   fetchTimeout: number = 1000 * 60
-) : Promise<any> => {
+): Promise<any> => {
   return await new Promise((resolve, reject) => {
     // Do fetch and put a place hold to queue
-    queue.unshift(undefined)
-    doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
-      reject?.(e)
-    });
+    queue.unshift(undefined);
+    doFetch(cj, url, options, fetchTimeout)
+      .then(resolve)
+      .catch((e) => {
+        reject?.(e);
+      });
   });
 };
 
@@ -28,7 +31,7 @@ const fetchWithCookieWithRetry = async (
   url: string,
   options: any | undefined = undefined,
   fetchTimeout: number = 1000 * 30
-) : Promise<any> => {
+): Promise<any> => {
   return await new Promise((resolve, reject) => {
     queue.push({
       cj,
@@ -41,23 +44,123 @@ const fetchWithCookieWithRetry = async (
   });
 };
 
+/**
+ * 递归爬取 https://maimai.wahlap.com/ 下所有链接
+ * @param startUrl 初始链接
+ * @returns 所有访问到的链接集合
+ */
+export async function crawlMaimaiLinks(
+  cj: any,
+  startUrl: string
+): Promise<Set<string>> {
+  const visited = new Set<string>();
+  const queue: string[] = [startUrl];
+
+  while (queue.length > 0) {
+    const url = queue.shift()!;
+    if (visited.has(url)) continue;
+
+    console.log("Visit URL:", url);
+
+    visited.add(url);
+
+    try {
+      const res = await fetchWithCookieWithRetry(cj, url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+        },
+      });
+      const html = await res.text();
+
+      // 匹配所有 https://maimai.wahlap.com/ 开头的链接
+      const regex = /https:\/\/maimai\.wahlap\.com\/[^\s"'<>]*/g;
+      const found = html.match(regex) || [];
+      for (const link of found) {
+        if (!visited.has(link)) {
+          queue.push(link);
+        }
+      }
+    } catch (e) {
+      console.error(`[Crawler][crawlMaimaiLinks] Error fetching ${url}:`, e);
+    }
+  }
+
+  return visited;
+}
+
+/**
+ * 递归爬取 https://maimai.wahlap.com/ 下所有非图片链接
+ * @param cj CookieJar
+ * @param startUrl 初始链接
+ * @returns 所有访问到的非图片链接集合
+ */
+export async function crawlMaimaiLinksNoImages(
+  cj: any,
+  startUrl: string
+): Promise<Set<string>> {
+  const visited = new Set<string>();
+  const queue: string[] = [startUrl];
+  // 常见图片扩展名
+  const imageExt = /\.(jpg|jpeg|png|gif|svg|webp|bmp|ico)(\?|#|$)/i;
+
+  while (queue.length > 0) {
+    const url = queue.shift()!;
+    if (visited.has(url)) continue;
+    // 忽略图片链接
+    if (imageExt.test(url)) continue;
+
+    console.log("Visit URL:", url);
+
+    visited.add(url);
+
+    try {
+      const res = await fetchWithCookieWithRetry(cj, url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+        },
+      });
+      const html = await res.text();
+
+      // 匹配所有 https://maimai.wahlap.com/ 开头的链接
+      const regex = /https:\/\/maimai\.wahlap\.com\/[^\s"'<>]*/g;
+      const found = html.match(regex) || [];
+      for (const link of found) {
+        // 忽略图片链接
+        if (!visited.has(link) && !imageExt.test(link)) {
+          queue.push(link);
+        }
+      }
+    } catch (e) {
+      console.error(
+        `[Crawler][crawlMaimaiLinksNoImages] Error fetching ${url}:`,
+        e
+      );
+    }
+  }
+
+  return visited;
+}
+
 setInterval(() => {
   if (queue.length === 0) return;
   console.log("[Crawler][Fetch] Queue length:", queue.length);
-  if (queue.length >= 60) lock = true
-  else lock = false
+  if (queue.length >= 60) lock = true;
+  else lock = false;
   try {
     const data = queue.shift();
-    if (!data) return
-    const { cj, url, options, fetchTimeout, resolve, reject } = data
-    doFetch(cj, url, options, fetchTimeout).then(resolve).catch(e => {
-      reject?.(e)
-    });
-  }
-  catch (e) {
+    if (!data) return;
+    const { cj, url, options, fetchTimeout, resolve, reject } = data;
+    doFetch(cj, url, options, fetchTimeout)
+      .then(resolve)
+      .catch((e) => {
+        reject?.(e);
+      });
+  } catch (e) {
     console.error("[Crawler][Fetch] Start do fetch error:", e);
   }
-}, 500);
+}, 100);
 
 async function verifyProberAccount(username: string, password: string) {
   const res = await fetch(
@@ -90,7 +193,9 @@ async function getAuthUrl(type: GameType) {
   const res = await fetch(
     `https://tgk-wcaime.wahlap.com/wc_auth/oauth/authorize/${type}`
   );
-  const href = res.url.replace("redirect_uri=https", "redirect_uri=http");
+  let href = res.url.replace("redirect_uri=https", "redirect_uri=http");
+  // href = href.replace("connect_redirect=1", "connect_redirect=2");
+  // console.log(href);
   return href;
 }
 
@@ -122,7 +227,7 @@ const getCookieByAuthUrl = async (authUrl: string) => {
 };
 
 export interface PageInfo {
-  pageType: "A" | "G" | "W"
+  pageType: "A" | "G" | "W";
 }
 
 export enum MaimaiDiffType {
@@ -139,14 +244,17 @@ const updateMaimaiScore = async (
   authUrl: string,
   traceUUID: string,
   diffList: MaimaiDiffType[],
-  pageInfo: Map<MaimaiDiffType, PageInfo>,
+  pageInfo: Map<MaimaiDiffType, PageInfo>
 ) => {
   try {
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 5 * 60) =>
-      await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
+    const fetch = async (
+      url: string,
+      options: any = undefined,
+      fetchTimeout: number = 1000 * 5 * 60
+    ) => await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
       log: "开始更新 maimai 成绩",
@@ -180,11 +288,26 @@ const updateMaimaiScore = async (
       const body = await result.text();
 
       if (body.match("错误")) {
-        const errroCode = (body.match(/<div class="p_5 f_14 ">(.*)<\/div>/) ?? [])[1];
-        const errorBody = (body.match(/<div class="p_5 f_12 gray break">(.*)<\/div>/) ?? [])[1];
+        const errroCode = (body.match(/<div class="p_5 f_14 ">(.*)<\/div>/) ??
+          [])[1];
+        const errorBody = (body.match(
+          /<div class="p_5 f_12 gray break">(.*)<\/div>/
+        ) ?? [])[1];
         throw new Error("登录公众号时出现错误 " + errroCode + " " + errorBody);
       }
     });
+
+    console.log(authUrl, getCookieValue(cj));
+
+    // const links = await crawlMaimaiLinksNoImages(cj, "https://maimai.wahlap.com/maimai-mobile/home/");
+    // console.log(
+    //   `[Crawler][updateMaimaiScore] 爬取到 ${links.size} 个链接`
+    // );
+    // links.forEach(link => {
+    //   console.log(link)
+    // });
+
+    return;
 
     const diffNameList = [
       MaimaiDiffType.Basic,
@@ -209,58 +332,74 @@ const updateMaimaiScore = async (
             });
             return;
           }
-          
+
           const pageType = pageInfo[name].pageType ?? "A";
-          const pages : any[] =
-                pageType === "A"
+          const pages: any[] =
+            pageType === "A"
               ? [undefined]
               : pageType === "G"
               ? [101, 102, 103, 104, 105, 106]
               : pageType === "W"
               ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
               : [undefined];
-          
+
           await Promise.all(
             pages.map(async (page, index) => {
-              const nameWithPage = `${name}` + (`(第 ${index + 1} / ${pages.length} 页)`);
+              const nameWithPage =
+                `${name}` + `(第 ${index + 1} / ${pages.length} 页)`;
               let body: undefined | string = undefined;
 
               // Sleep random time to avoid ban
-              await sleep(1000 * (diff + index + 1) * 2 + 1000 * 5 * Math.random());
+              await sleep(
+                1000 * (diff + index + 1) * 2 + 1000 * 5 * Math.random()
+              );
 
-              await stage(`获取 ${nameWithPage} 分数`, progress * 1.0 / pages.length, async () => {
-                const url = `https://maimai.wahlap.com/maimai-mobile/record/musicSort/search/?search=${pageType + page !== undefined ? `${page}`: ""}&sort=1&playCheck=on&diff=${diff}`
-                const result = await fetch(url, {
-                  headers: {
-                    Host: "maimai.wahlap.com",
-                    "User-Agent":
-                      "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x6307001e)",
-                  },
-                });
+              await stage(
+                `获取 ${nameWithPage} 分数`,
+                (progress * 1.0) / pages.length,
+                async () => {
+                  const url = `https://maimai.wahlap.com/maimai-mobile/record/musicSort/search/?search=${
+                    pageType + page !== undefined ? `${page}` : ""
+                  }&sort=1&playCheck=on&diff=${diff}`;
+                  const result = await fetch(url, {
+                    headers: {
+                      Host: "maimai.wahlap.com",
+                      "User-Agent":
+                        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x6307001e)",
+                    },
+                  });
 
-                if (result.url.indexOf("error") !== -1) {
-                  const text = await result.text();
-                  const errroCode = text.match(/<div class="p_5 f_14 ">(.*)<\/div>/)[1];
-                  const errorBody = text.match(
-                    /<div class="p_5 f_12 gray break">(.*)<\/div>/
-                  )[1];
+                  if (result.url.indexOf("error") !== -1) {
+                    const text = await result.text();
+                    const errroCode = text.match(
+                      /<div class="p_5 f_14 ">(.*)<\/div>/
+                    )[1];
+                    const errorBody = text.match(
+                      /<div class="p_5 f_12 gray break">(.*)<\/div>/
+                    )[1];
 
-                  throw Error("Error code " + errroCode + " Error Body" + errorBody);
+                    throw Error(
+                      "Error code " + errroCode + " Error Body" + errorBody
+                    );
+                  }
+
+                  body = (await result.text())
+                    .match(/<html.*>([\s\S]*)<\/html>/)[1]
+                    .replace(/\s+/g, " ");
+
+                  // Assert body is not empty
+                  if (
+                    body == undefined ||
+                    body?.indexOf("btn_music_level.png") == -1
+                  ) {
+                    throw new Error("获取 " + nameWithPage + " 分数时出现错误");
+                  }
                 }
-                
-                body = (await result.text())
-                  .match(/<html.*>([\s\S]*)<\/html>/)[1]
-                  .replace(/\s+/g, " ");
-
-                // Assert body is not empty
-                if (body == undefined || body?.indexOf("btn_music_level.png") == -1) {
-                  throw new Error("获取 " + nameWithPage + " 分数时出现错误");
-                }
-              });
+              );
 
               await stage(
                 `上传 ${nameWithPage} 分数至 diving-fish 查分器数据库`,
-                progress * 1.0 / pages.length,
+                (progress * 1.0) / pages.length,
                 async () => {
                   const uploadResult = await doFetch(
                     cj,
@@ -312,14 +451,17 @@ const updateChunithmScore = async (
   authUrl: string,
   traceUUID: string,
   diffList: ChunithmDiffType[],
-  _pageInfo: any, // TODO: Support paging for chunithm
+  _pageInfo: any // TODO: Support paging for chunithm
 ) => {
   try {
     const trace = useTrace(traceUUID);
     const stage = useStage(trace);
     const cj = new CookieJar();
-    const fetch = async (url: string, options: any = undefined, fetchTimeout : number = 1000 * 5 * 60) =>
-      await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
+    const fetch = async (
+      url: string,
+      options: any = undefined,
+      fetchTimeout: number = 1000 * 5 * 60
+    ) => await fetchWithCookieWithRetry(cj, url, options, fetchTimeout);
 
     await trace({
       log: "开始更新 chunithm 成绩",
@@ -328,22 +470,26 @@ const updateChunithmScore = async (
     });
 
     await stage("登录公众号", 6.25, async () => {
-      const authResult = await fetchWithCookieWithRetryHighPriority(cj, authUrl, {
-        headers: {
-          Connection: "keep-alive",
-          "Upgrade-Insecure-Requests": "1",
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x6307001e)",
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-          "Sec-Fetch-Site": "none",
-          "Sec-Fetch-Mode": "navigate",
-          "Sec-Fetch-User": "?1",
-          "Sec-Fetch-Dest": "document",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-        },
-      });
+      const authResult = await fetchWithCookieWithRetryHighPriority(
+        cj,
+        authUrl,
+        {
+          headers: {
+            Connection: "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x6307001e)",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-User": "?1",
+            "Sec-Fetch-Dest": "document",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+        }
+      );
 
       const body = await authResult.text();
       if (body.match("错误码")) {
@@ -386,7 +532,7 @@ const updateChunithmScore = async (
     ];
 
     const _t = cj.cookies.get("chunithm.wahlap.com").get("_t").value;
-    
+
     const tasks: Promise<any>[] = [];
     [0, 1, 2, 3, 4, 5, 6].forEach((diff) => {
       const name = diffNameList[diff];
@@ -426,16 +572,24 @@ const updateChunithmScore = async (
 
             if (result.url.indexOf("error") !== -1) {
               const text = await result.text();
-              const errroCode = text.match(/<div class="p_5 f_14 ">(.*)<\/div>/)?.[1];
+              const errroCode = text.match(
+                /<div class="p_5 f_14 ">(.*)<\/div>/
+              )?.[1];
               const errorBody = text.match(
                 /<div class="p_5 f_12 gray break">(.*)<\/div>/
               )?.[1];
 
-              throw Error("Error code " + errroCode + " Error Body" + errorBody);
+              throw Error(
+                "Error code " + errroCode + " Error Body" + errorBody
+              );
             }
-            
+
             resultHtml = await result.text();
-            if (resultHtml === undefined || (resultHtml?.indexOf("乐曲成绩") === -1 && resultHtml?.indexOf("Rating对象乐")  === -1)) {
+            if (
+              resultHtml === undefined ||
+              (resultHtml?.indexOf("乐曲成绩") === -1 &&
+                resultHtml?.indexOf("Rating对象乐") === -1)
+            ) {
               throw new Error("获取 " + name + " 分数时出现错误");
             }
           });

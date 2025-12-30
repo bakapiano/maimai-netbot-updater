@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maimai Cookie Manager</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+        pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+        .row { margin-bottom: 1rem; }
+    </style>
+    <script>
+        let checkInterval;
+        let currentUserFriendCode = null;
+        let redirecting = false;
+        let jobServiceBase = "";
+        async function resolveJobServiceBase() {
+            if (jobServiceBase) {
+                return jobServiceBase;
+            }
+            try {
+                const response = await fetch('/api/job-service/config');
+                if (!response.ok) {
+                    throw new Error('Failed to resolve job service config');
+                }
+                const data = await response.json();
+                if (!data.baseUrl) {
+                    throw new Error('Job service base URL is not configured');
+                }
+                jobServiceBase = data.baseUrl.replace(/\/$/, '');
+                return jobServiceBase;
+            } catch (err) {
+                console.error(err);
+                throw err;
+            }
+        }
+
+
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        async function startAuth() {
+            try {
+                const response = await fetch('/api/auth');
+                const data = await response.json();
+                if (data.authUrl) {
+                    window.location.href = data.authUrl;
+                } else {
+                    alert("Failed to get auth URL");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error starting auth");
+            }
+        }
+
+        async function checkStatus() {
+            if (!currentUserFriendCode || redirecting) return;
+
+            try {
+                const response = await fetch(`/api/status?friendCode=${currentUserFriendCode}`);
+                const data = await response.json();
+                
+                if (data.expired) {
+                    document.getElementById('status').innerText = "Cookie expired or not found. Please re-auth.";
+                    document.getElementById('authSection').style.display = 'block';
+                    redirecting = true;
+                    if (checkInterval) {
+                        clearInterval(checkInterval);
+                        checkInterval = null;
+                    }
+                    await startAuth();
+                } else {
+                    document.getElementById('status').innerText = `Cookie is valid for user ${currentUserFriendCode}`;
+                    document.getElementById('authSection').style.display = 'none';
+                    if (data.cookie) {
+                        document.getElementById('cookieInfo').innerText = JSON.stringify(data.cookie, null, 2);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to check status", e);
+                document.getElementById('status').innerText = "Failed to check status";
+            }
+        }
+
+        function toggleAutoCheck() {
+            const checkbox = document.getElementById('autoCheck');
+            if (checkbox.checked) {
+                checkStatus();
+                if (!checkInterval) {
+                    checkInterval = setInterval(checkStatus, 5000);
+                }
+            } else {
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    checkInterval = null;
+                }
+            }
+        }
+
+        async function createJob() {
+            const friendCode = document.getElementById('friendCode').value;
+            if (!friendCode) {
+                alert("Please enter a Friend Code");
+                return;
+            }
+
+            let base;
+            try {
+                base = await resolveJobServiceBase();
+            } catch (err) {
+                document.getElementById('createJobResult').innerText = 'Error: ' + err;
+                return;
+            }
+
+            try {
+                const res = await fetch(`${base}/api/job/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ friendCode })
+                });
+                const data = await res.json();
+                document.getElementById('createJobResult').innerText = JSON.stringify(data, null, 2);
+                if (data.jobId) {
+                    document.getElementById('jobId').value = data.jobId;
+                }
+            } catch (e) {
+                document.getElementById('createJobResult').innerText = 'Error: ' + e;
+            }
+        }
+
+        async function getJobStatus() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                alert("Please enter a Job ID");
+                return;
+            }
+            let base;
+            try {
+                base = await resolveJobServiceBase();
+            } catch (err) {
+                document.getElementById('jobStatusResult').innerText = 'Error: ' + err;
+                return;
+            }
+
+            try {
+                const res = await fetch(`${base}/api/job/` + jobId);
+                const data = await res.json();
+                document.getElementById('jobStatusResult').innerText = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('jobStatusResult').innerText = 'Error: ' + e;
+            }
+        }
+
+        window.onload = () => {
+            currentUserFriendCode = getQueryParam('friendCode');
+            
+            if (currentUserFriendCode) {
+                document.getElementById('userInfo').innerText = `Logged in as: ${currentUserFriendCode}`;
+                document.getElementById('authSection').style.display = 'none';
+                toggleAutoCheck();
+            } else {
+                document.getElementById('userInfo').innerText = "Not logged in";
+                document.getElementById('status').innerText = "Please authenticate first.";
+                document.getElementById('authSection').style.display = 'block';
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Maimai Cookie Manager</h1>
+    
+    <div class="section">
+        <h2>User Info</h2>
+        <div id="userInfo">Loading...</div>
+        <div id="authSection" style="margin-top: 1rem;">
+            <button onclick="startAuth()">Start Auth (Login)</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Status</h2>
+        <div id="status">Checking status...</div>
+        <pre id="cookieInfo"></pre>
+        <div class="row">
+            <label>
+                <input type="checkbox" id="autoCheck" onchange="toggleAutoCheck()" checked> Auto Check Status (5s)
+            </label>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Job Manager</h2>
+        <div class="row">
+            <label>Friend Code: <input type="text" id="friendCode" placeholder="Enter Friend Code" value="634142510810999"></label>
+            <button onclick="createJob()">Create Job</button>
+        </div>
+        <pre id="createJobResult">Job creation result will appear here...</pre>
+
+        <div class="row">
+            <label>Job ID: <input type="text" id="jobId" placeholder="Job ID"></label>
+            <button onclick="getJobStatus()">Get Job Status</button>
+        </div>
+        <pre id="jobStatusResult">Job status will appear here...</pre>
+    </div>
+</body>
+</html>

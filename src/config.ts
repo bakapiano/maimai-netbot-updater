@@ -22,7 +22,7 @@ const config = {
     cmd2Execute: "python C:\\Users\\bakapiano\\wechat_login.py",
   },
   bot: {
-    enable: true,
+    enable: false,
     trigger: "http://20.84.57.132:8081",
     cookiePath: "C:\\Users\\bakapiano\\cookie.json",
   },
@@ -39,7 +39,7 @@ const config = {
 const serverHost = process.argv.slice(2)[0];
 if (serverHost !== undefined) {
   config.host = serverHost;
-  if (["127.0.0.1", "localhost"].includes(serverHost)) config.dev = true
+  if (["127.0.0.1", "localhost"].includes(serverHost)) config.dev = true;
 }
 
 // console.log(`SERVER_HOST=${serverHost}`);

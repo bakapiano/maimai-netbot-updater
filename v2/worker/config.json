@@ -1,0 +1,28 @@
+{
+    "dev": {
+        "host": "192.168.6.165",
+        "port": 3000,
+        "fetchTimeOut": 300000,
+        "fetchRetryCount": 3,
+        "redirectUrl": "http://192.168.6.165:3000/",
+        "httpProxy": {
+            "port": 2560
+        },
+        "jobService": {
+            "baseUrl": "http://192.168.6.165:3100"
+        }
+    },
+    "production": {
+        "host": "maimai.bakapiano.com",
+        "port": 3000,
+        "fetchTimeOut": 300000,
+        "fetchRetryCount": 3,
+        "redirectUrl": "https://maimai.bakapiano.com/",
+        "httpProxy": {
+            "port": 2560
+        },
+        "jobService": {
+            "baseUrl": "https://job.maimai.bakapiano.com"
+        }
+    }
+}

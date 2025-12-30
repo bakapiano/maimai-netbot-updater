@@ -1,6 +1,12 @@
 import "express-async-errors";
 
-import { GameType, MaimaiDiffType, PageInfo, getAuthUrl, verifyProberAccount } from "./crawler.js";
+import {
+  GameType,
+  MaimaiDiffType,
+  PageInfo,
+  getAuthUrl,
+  verifyProberAccount,
+} from "./crawler.js";
 import {
   appendQueue,
   delValue,
@@ -34,16 +40,36 @@ async function serve(
   redirect: boolean
 ) {
   if (taskQueue.length >= 10) {
-    console.log(`[Worker API] ${taskQueue.length} task queue length reached, hit lock!`)
+    console.log(
+      `[Worker API] ${taskQueue.length} task queue length reached, hit lock!`
+    );
     serverRes.status(400).send("同时使用人数过多，请稍后再试！");
     return;
   }
-  
-  let { username, password, callbackHost, type, diffList, allDiff, page, pageInfo } = data;
+
+  let {
+    username,
+    password,
+    callbackHost,
+    type,
+    diffList,
+    allDiff,
+    page,
+    pageInfo,
+  } = data;
 
   if (typeof diffList === "string") diffList = diffList?.split(",");
 
-  console.log(username, password, callbackHost, type, diffList, allDiff, page, pageInfo );
+  console.log(
+    username,
+    password,
+    callbackHost,
+    type,
+    diffList,
+    allDiff,
+    page,
+    pageInfo
+  );
 
   if (!username || !password) {
     serverRes.status(400).send("用户名或密码不能为空！");
@@ -89,13 +115,13 @@ async function serve(
         : ["Expert", "Master", "Ultima", "WorldsEnd", "Recent"];
   }
 
-  if (
-    !(await verifyProberAccount(username, password)) &&
-    username !== "bakapiano666" // 为 app 保留的用户名
-  ) {
-    serverRes.status(400).send("查分器用户名或密码错误！");
-    return;
-  }
+  // if (
+  //   !(await verifyProberAccount(username, password)) &&
+  //   username !== "bakapiano666" // 为 app 保留的用户名
+  // ) {
+  //   serverRes.status(400).send("查分器用户名或密码错误！");
+  //   return;
+  // }
 
   if (callbackHost === undefined) {
     callbackHost = config.host;
@@ -108,35 +134,39 @@ async function serve(
   const key = String(parse(String(redirect_uri), true).query.r);
 
   const defaultMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
-  defaultMaimaiPageInfo["Basic"]     = { pageType: "G" }
-  defaultMaimaiPageInfo["Advanced"]  = { pageType: "G" }
-  defaultMaimaiPageInfo["Expert"]    = { pageType: "G" }
-  defaultMaimaiPageInfo["Master"]    = { pageType: "G" }
-  defaultMaimaiPageInfo["Re:Master"] = { pageType: "A" }
+  defaultMaimaiPageInfo["Basic"] = { pageType: "G" };
+  defaultMaimaiPageInfo["Advanced"] = { pageType: "G" };
+  defaultMaimaiPageInfo["Expert"] = { pageType: "G" };
+  defaultMaimaiPageInfo["Master"] = { pageType: "G" };
+  defaultMaimaiPageInfo["Re:Master"] = { pageType: "A" };
 
   const disabledMaimaiPageInfo = new Map<MaimaiDiffType, PageInfo>();
-  disabledMaimaiPageInfo["Basic"]     = { pageType: "A"}
-  disabledMaimaiPageInfo["Advanced"]  = { pageType: "A"}
-  disabledMaimaiPageInfo["Expert"]    = { pageType: "A"}
-  disabledMaimaiPageInfo["Master"]    = { pageType: "A"}
-  disabledMaimaiPageInfo["Re:Master"] = { pageType: "A"}
+  disabledMaimaiPageInfo["Basic"] = { pageType: "A" };
+  disabledMaimaiPageInfo["Advanced"] = { pageType: "A" };
+  disabledMaimaiPageInfo["Expert"] = { pageType: "A" };
+  disabledMaimaiPageInfo["Master"] = { pageType: "A" };
+  disabledMaimaiPageInfo["Re:Master"] = { pageType: "A" };
 
   // 兼容旧版 page 短链接
-  if ((page !== undefined || page !== null) && (pageInfo === undefined || pageInfo === null) && type === "maimai-dx") {
+  if (
+    (page !== undefined || page !== null) &&
+    (pageInfo === undefined || pageInfo === null) &&
+    type === "maimai-dx"
+  ) {
     pageInfo = page === true ? defaultMaimaiPageInfo : disabledMaimaiPageInfo;
   }
 
   if ((pageInfo === undefined || pageInfo === null) && type === "maimai-dx") {
-    pageInfo = defaultMaimaiPageInfo
+    pageInfo = defaultMaimaiPageInfo;
   }
 
   // TODO: Support chunithm paging
   if (type === "chunithm") {
-    pageInfo = undefined
+    pageInfo = undefined;
   }
-  
+
   await setValue(key, { username, password, callbackHost, diffList, pageInfo });
-  
+
   increaseCount();
 
   redirect === true
@@ -144,20 +174,25 @@ async function serve(
     : serverRes.status(200).send(href);
 }
 
+app.get("/test", async (serverReq: any, serverRes: any) => {
+  const href = await getAuthUrl(GameType.maimai);
+  return serverRes.status(200).send(href);
+});
+
 app.post("/retry", jsonParser, async (serverReq: any, serverRes: any) => {
-  const uuid = serverReq.body?.uuid
+  const uuid = serverReq.body?.uuid;
   if (typeof uuid !== "string" || uuid === "") {
-    serverRes.status(400).send("请提供uuid")
-    return
-  }
-  
-  const data = await getValue(uuid)
-  if (!data) {
-    serverRes.status(400).send("uuid 不存在")
-    return
+    serverRes.status(400).send("请提供uuid");
+    return;
   }
 
-  console.log(data)
+  const data = await getValue(uuid);
+  if (!data) {
+    serverRes.status(400).send("uuid 不存在");
+    return;
+  }
+
+  console.log(data);
 
   return await serve(serverReq, serverRes, data, false);
 });
@@ -223,7 +258,12 @@ if (config.wechatLogin.enable) {
 }
 
 if (config.bot.enable) {
-  async function botServe(serverReq: any, serverRes: any, data: any, redirect: boolean) {
+  async function botServe(
+    serverReq: any,
+    serverRes: any,
+    data: any,
+    redirect: boolean
+  ) {
     let { username, password, friendCode, callbackHost } = data;
 
     if (callbackHost === undefined) {
@@ -241,7 +281,7 @@ if (config.bot.enable) {
     }
 
     if (isLock()) {
-      console.log("[Bot] Hit Lock")
+      console.log("[Bot] Hit Lock");
       serverRes.status(400).send("Bot 同时使用人数过多，请稍后再试！");
       return;
     }
@@ -288,96 +328,129 @@ if (config.bot.enable) {
 }
 
 // Worker api
-export type Task = {uuid: string, data : any, type: GameType, appendTime: number}
-var taskQueue : Task[] = []
-var pendingQueue : Task[] = []
+export type Task = {
+  uuid: string;
+  data: any;
+  type: GameType;
+  appendTime: number;
+};
+var taskQueue: Task[] = [];
+var pendingQueue: Task[] = [];
 
 function appendTask(data, type: GameType) {
-  const { traceUUID } = data
-  taskQueue.push({uuid: traceUUID, data, type, appendTime: Date.now()})
-  console.log("[Worker] Append Task", traceUUID, data)
-  console.log("[Worker] Task Queue Length", taskQueue.length)
+  const { traceUUID } = data;
+  taskQueue.push({ uuid: traceUUID, data, type, appendTime: Date.now() });
+  console.log("[Worker] Append Task", traceUUID, data);
+  console.log("[Worker] Task Queue Length", taskQueue.length);
 }
 
-app.get("/task/", validateToken(async (serverReq: any, serverRes: any) => {
-  const task = taskQueue.shift()
-  if (task) {
-    pendingQueue.push(task)
-    serverRes.send(JSON.stringify(task))
-    // If not ack in 5s, put it back to task queue
-    setTimeout(() => {
-      const { uuid } = task
-      if (pendingQueue.find((task) => task.uuid === uuid)) {
-        console.log("[Worker] Task not ack in 5s, put it back to task queue", uuid)
-        pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid)
-        taskQueue.push(task)
-      }
-    }, 1000 * 5)
-  }
-  else {
-    serverRes.status(400).send("No task")
-  }
-}));
+app.get(
+  "/task/",
+  validateToken(async (serverReq: any, serverRes: any) => {
+    const task = taskQueue.shift();
+    if (task) {
+      pendingQueue.push(task);
+      serverRes.send(JSON.stringify(task));
+      // If not ack in 5s, put it back to task queue
+      setTimeout(() => {
+        const { uuid } = task;
+        if (pendingQueue.find((task) => task.uuid === uuid)) {
+          console.log(
+            "[Worker] Task not ack in 5s, put it back to task queue",
+            uuid
+          );
+          pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid);
+          taskQueue.push(task);
+        }
+      }, 1000 * 5);
+    } else {
+      serverRes.status(400).send("No task");
+    }
+  })
+);
 
-app.post("/task/:uuid/", jsonParser, validateToken(async (serverReq: any, serverRes: any) => {
-  const { uuid } = serverReq.params;
-  const task = pendingQueue.find((task) => task.uuid === uuid)
-  if (task) {
-    console.log("[Worker] Task ack", uuid)
-    pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid)
-    serverRes.status(200).send("OK")
-  }
-  else {
-    serverRes.status(400).send("Task not found")
-  }
-}));
+app.post(
+  "/task/:uuid/",
+  jsonParser,
+  validateToken(async (serverReq: any, serverRes: any) => {
+    const { uuid } = serverReq.params;
+    const task = pendingQueue.find((task) => task.uuid === uuid);
+    if (task) {
+      console.log("[Worker] Task ack", uuid);
+      pendingQueue = pendingQueue.filter((task) => task.uuid !== uuid);
+      serverRes.status(200).send("OK");
+    } else {
+      serverRes.status(400).send("Task not found");
+    }
+  })
+);
 
 // DB
-app.get("/db/:key/", validateToken(async (serverReq: any, serverRes: any) => {
-  const { key } = serverReq.params;
-  const value = await getValue(key);
-  serverRes.send(JSON.stringify({value}));
-}));
+app.get(
+  "/db/:key/",
+  validateToken(async (serverReq: any, serverRes: any) => {
+    const { key } = serverReq.params;
+    const value = await getValue(key);
+    serverRes.send(JSON.stringify({ value }));
+  })
+);
 
-app.post("/db/:key/", jsonParser, validateToken(async (serverReq: any, serverRes: any) => {
-  const { key } = serverReq.params;
-  const { value } = serverReq.body;
-  await setValue(key, value);
-  serverRes.send("OK");
-}));
+app.post(
+  "/db/:key/",
+  jsonParser,
+  validateToken(async (serverReq: any, serverRes: any) => {
+    const { key } = serverReq.params;
+    const { value } = serverReq.body;
+    await setValue(key, value);
+    serverRes.send("OK");
+  })
+);
 
 // 小黑屋
 let apiEndpoint = null;
-app.post("/logout/", jsonParser, (async (serverReq: any, serverRes: any) => {
+app.post("/logout/", jsonParser, async (serverReq: any, serverRes: any) => {
   if (apiEndpoint == null) {
     serverRes.status(400).send("服务暂时不可用");
     return;
   }
 
   const { uid } = serverReq.body;
-  const r = await fetch(`http://${apiEndpoint}/api/logout?uid=${uid}`, {method: "GET"});
+  const r = await fetch(`http://${apiEndpoint}/api/logout?uid=${uid}`, {
+    method: "GET",
+  });
   return serverRes.status(200).send(await r.text());
-}));
+});
 
-app.post("/qrcode/", jsonParser, (async (serverReq: any, serverRes: any) => {
+app.post("/qrcode/", jsonParser, async (serverReq: any, serverRes: any) => {
   if (apiEndpoint == null) {
     serverRes.status(400).send("服务暂时不可用");
     return;
   }
-  
+
   const { qrcode } = serverReq.body;
-  const r = await fetch(`http://${apiEndpoint}/api/get-userid?qrcode=${qrcode}`, {method: "GET"});
+  const r = await fetch(
+    `http://${apiEndpoint}/api/get-userid?qrcode=${qrcode}`,
+    { method: "GET" }
+  );
   return serverRes.status(200).send(await r.text());
-}));
+});
 
-app.get("/update/endpoint/", jsonParser, validateToken(async (serverReq: any, serverRes: any) => {
-  apiEndpoint = serverReq.query.endpoint;
-  return serverRes.status(200).send("OK");
-}));
+app.get(
+  "/update/endpoint/",
+  jsonParser,
+  validateToken(async (serverReq: any, serverRes: any) => {
+    apiEndpoint = serverReq.query.endpoint;
+    return serverRes.status(200).send("OK");
+  })
+);
 
-app.get("/get/endpoint/", jsonParser, validateToken(async (serverReq: any, serverRes: any) => {
-  return serverRes.status(200).send(apiEndpoint);
-}));
+app.get(
+  "/get/endpoint/",
+  jsonParser,
+  validateToken(async (serverReq: any, serverRes: any) => {
+    return serverRes.status(200).send(apiEndpoint);
+  })
+);
 
 app.use(express.static("static"));
 
