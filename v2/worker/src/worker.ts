@@ -7,7 +7,9 @@ import {
   getFriendList,
   getFriendVS,
   getSentRequests,
+  getUserProfile,
   removeFriend,
+  searchUserByFriendCode,
   sendFriendRequest,
   type SentRequest,
 } from "./crawler.ts";
@@ -199,6 +201,8 @@ async function handleJob(initialJob: Job) {
     });
     return;
   }
+
+  console.log(await getUserProfile(cj, job.friendCode));
 
   try {
     startHeartbeat();

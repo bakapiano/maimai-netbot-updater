@@ -82,6 +82,7 @@ const fetchWithToken = async (
 };
 
 async function dumpHtml(kind: string, html: string) {
+  return;
   try {
     const dir = join(process.cwd(), "log", "crawler");
     await mkdir(dir, { recursive: true });
@@ -140,6 +141,18 @@ export const getSentRequests = async (
   return requests;
 };
 
+export type UserProfile = {
+  avatarUrl: string | null;
+  title: string | null;
+  titleColor: string | null;
+  username: string | null;
+  rating: number | null;
+  ratingBgUrl: string | null;
+  courseRankUrl: string | null;
+  classRankUrl: string | null;
+  awakeningCount: number | null;
+};
+
 export const searchUserByFriendCode = async (
   cj: CookieJar,
   friendCode: string
@@ -153,6 +166,71 @@ export const searchUserByFriendCode = async (
   dumpHtml(`search-user-${friendCode}`, text);
   console.log(`[Crawler] Done search user by friend code ${friendCode}`);
   return [] as any[];
+};
+
+export const getUserProfile = async (
+  cj: CookieJar,
+  friendCode: string
+): Promise<UserProfile> => {
+  console.log(`[Crawler] Start get user profile by friend code ${friendCode}`);
+  const url = `https://maimai.wahlap.com/maimai-mobile/friend/search/searchUser/?friendCode=${encodeURIComponent(
+    friendCode
+  )}`;
+  const result = await fetchWithToken(cj, url);
+  const text = await result!.text();
+  dumpHtml(`user-profile-${friendCode}`, text);
+
+  const firstMatch = (re: RegExp) => {
+    const m = text.match(re);
+    return m ? m[1] : null;
+  };
+
+  const avatarUrl = firstMatch(
+    /<img(?=[^>]*class="w_112 f_l")[^>]*src="([^"]+)"/i
+  );
+
+  const titleMatch = text.match(
+    /<div class="trophy_block\s+([^\"]*?)"[\s\S]*?<div class="trophy_inner_block[^"]*">\s*<span>(.*?)<\/span>/i
+  );
+  const titleColor = titleMatch
+    ? titleMatch[1].match(/trophy_([A-Za-z0-9_-]+)/)?.[1] ?? null
+    : null;
+  const title = titleMatch ? titleMatch[2] : null;
+
+  const username = firstMatch(
+    /<div class="name_block f_l f_16">([\s\S]*?)<\/div>/i
+  );
+
+  const ratingBgUrl = firstMatch(
+    /<img[^>]+src="([^"]+rating_base[^"]*)"[^>]*class="h_30 f_r"/i
+  );
+  const ratingStr = firstMatch(/<div class="rating_block">(\d+)<\/div>/i);
+  const rating = ratingStr ? parseInt(ratingStr, 10) : null;
+
+  const courseRankUrl = firstMatch(
+    /<img[^>]+src="([^"]+course\/course_rank[^"]*)"[^>]*class="h_35 f_l"/i
+  );
+  const classRankUrl = firstMatch(
+    /<img[^>]+src="([^"]+class\/class_rank[^"]*)"[^>]*class="p_l_10 h_35 f_l"/i
+  );
+
+  const awakeningCountStr = firstMatch(/icon_star\.png[\s\S]*?>×(\d+)/i);
+  const awakeningCount = awakeningCountStr
+    ? parseInt(awakeningCountStr, 10)
+    : null;
+
+  console.log(`[Crawler] Done get user profile by friend code ${friendCode}`);
+  return {
+    avatarUrl,
+    title,
+    titleColor,
+    username,
+    rating,
+    ratingBgUrl,
+    courseRankUrl,
+    classRankUrl,
+    awakeningCount,
+  };
 };
 
 export const sendFriendRequest = async (cj: CookieJar, friendCode: string) => {
