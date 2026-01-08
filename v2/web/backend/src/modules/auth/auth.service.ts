@@ -47,6 +47,10 @@ export class AuthService {
 
       const now = Math.floor(Date.now() / 1000);
       const userId = String(user._id);
+      if (job.profile) {
+        await this.users.update(userId, { profile: job.profile });
+      }
+
       const payload = {
         sub: userId,
         friendCode: user.friendCode,

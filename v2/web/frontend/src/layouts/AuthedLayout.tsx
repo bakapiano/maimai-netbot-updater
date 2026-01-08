@@ -6,6 +6,7 @@ import { useAuth } from "../providers/AuthProvider";
 
 const links = [
   { label: "Home", to: "/app" },
+  { label: "成绩", to: "/app/scores" },
   { label: "Debug (旧版)", to: "/app/debug" },
 ];
 
@@ -27,7 +28,7 @@ export default function AuthedLayout() {
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
-          <Text fw={700}>NetBot 控制台</Text>
+          <Text fw={700}>maimai DX Copilot</Text>
           <Group>
             <ColorSchemeToggle />
             <Button variant="light" onClick={handleLogout} size="xs">
@@ -38,11 +39,6 @@ export default function AuthedLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <Group justify="space-between" align="center" mb="sm">
-          <Text fw={600} size="sm">
-            导航
-          </Text>
-        </Group>
         {links.map((link) => (
           <NavLink
             key={link.to}

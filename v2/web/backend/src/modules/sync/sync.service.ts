@@ -10,7 +10,11 @@ import type { Model } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 import { MusicEntity } from '../music/music.schema';
-import type { ChartPayload, MusicDocument } from '../music/music.schema';
+import type {
+  ChartPayload,
+  MusicDocument,
+  SongMetadata,
+} from '../music/music.schema';
 import { SyncEntity } from './sync.schema';
 import type { SyncDocument, SyncScore } from './sync.schema';
 import { getRating, normalizeAchievement } from '../../common/rating';
@@ -33,15 +37,14 @@ type ScoreSnapshot = {
   musicId: string;
   cid: number;
   chartIndex: number;
-  category: string | null;
   type: string;
-  title: string;
+  chartPayload: ChartPayload | null;
+  songMetadata: SongMetadata | null;
   dxScore: string | null;
   score: string | null;
   fs: string | null;
   fc: string | null;
   rating: number | null;
-  musicDetailLevel: number | null;
   isNew: boolean | null;
 };
 
@@ -108,13 +111,21 @@ export class SyncService {
     }
 
     const scores = Array.isArray(sync.scores) ? sync.scores : [];
-    scores.sort((a: any, b: any) => {
-      if (a.musicId !== b.musicId) return a.musicId.localeCompare(b.musicId);
-      if (a.cid !== b.cid) return a.cid - b.cid;
-      return a.chartIndex - b.chartIndex;
-    });
-
     return { ...sync, scores };
+  }
+
+  async getLatestWithScores(friendCode: string) {
+    const sync = await this.syncModel
+      .findOne({ friendCode })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!sync) {
+      throw new NotFoundException('No sync found');
+    }
+
+    const scores = Array.isArray(sync.scores) ? sync.scores : [];
+    return scores;
   }
 
   private async mapResultToScores(result: any): Promise<ScoreSnapshot[]> {
@@ -190,15 +201,21 @@ export class SyncService {
               musicId: music.id,
               cid: chart.cid,
               chartIndex,
-              category: category || null,
               type,
-              title,
+              chartPayload: chart ?? null,
+              songMetadata: {
+                title: music.title,
+                artist: music.artist ?? undefined,
+                category: music.category ?? undefined,
+                bpm: music.bpm ?? undefined,
+                from: null,
+                isNew: music.isNew ?? undefined,
+              },
               dxScore,
               score,
               fs: payload?.fs ?? null,
               fc: payload?.fc ?? null,
               rating,
-              musicDetailLevel,
               isNew: music.isNew ?? null,
             });
           }

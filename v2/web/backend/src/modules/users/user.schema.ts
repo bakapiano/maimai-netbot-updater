@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
 
 import type { HydratedDocument } from 'mongoose';
+import type { UserNetProfile } from './user.types';
 
 @Schema({ timestamps: true })
 export class UserEntity {
@@ -12,6 +14,9 @@ export class UserEntity {
 
   @Prop({ type: String, default: null })
   lxnsImportToken!: string | null;
+
+  @Prop({ type: MongooseSchema.Types.Mixed, default: undefined })
+  profile?: UserNetProfile | null;
 }
 
 export type UserDocument = HydratedDocument<UserEntity>;

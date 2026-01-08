@@ -22,7 +22,6 @@ export type ChartPayload = {
   detailLevel?: number;
   notes?: unknown;
   charter?: string;
-  [key: string]: unknown;
 };
 
 export interface SongMetadata {

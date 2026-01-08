@@ -1,4 +1,13 @@
-import { Badge, Box, Card, Group, Image, Stack, Text } from "@mantine/core";
+import {
+  Badge,
+  Box,
+  Card,
+  Divider,
+  Group,
+  Image,
+  Stack,
+  Text,
+} from "@mantine/core";
 
 export type UserProfile = {
   avatarUrl: string | null;
@@ -94,6 +103,8 @@ export function ProfileCard({ profile }: Props) {
               </Badge>
             )}
           </Box>
+
+          <Divider variant="dashed" />
 
           {/* Row 3: badges and star; height = 1/3 */}
           <Box

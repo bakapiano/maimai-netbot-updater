@@ -6,17 +6,8 @@ export type JobStatus =
   | 'canceled';
 export type JobStage = 'send_request' | 'wait_acceptance' | 'update_score';
 
-export interface UserProfile {
-  avatarUrl: string | null;
-  title: string | null;
-  titleColor: string | null;
-  username: string | null;
-  rating: number | null;
-  ratingBgUrl: string | null;
-  courseRankUrl: string | null;
-  classRankUrl: string | null;
-  awakeningCount: number | null;
-}
+import type { UserNetProfile } from '../users/user.types';
+export type UserProfile = UserNetProfile;
 
 export interface JobResponse {
   id: string;

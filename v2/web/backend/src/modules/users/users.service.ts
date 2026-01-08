@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { isValidObjectId } from 'mongoose';
 import { UserEntity } from './user.schema';
+import type { UserNetProfile } from './user.types';
 
 @Injectable()
 export class UsersService {
@@ -32,11 +33,13 @@ export class UsersService {
     friendCode: string;
     divingFishImportToken?: string | null;
     lxnsImportToken?: string | null;
+    profile?: UserNetProfile | null;
   }) {
     const created = await this.userModel.create({
       friendCode: input.friendCode,
       divingFishImportToken: input.divingFishImportToken ?? null,
       lxnsImportToken: input.lxnsImportToken ?? null,
+      profile: input.profile ?? null,
     });
     return created.toObject();
   }
@@ -46,20 +49,27 @@ export class UsersService {
     input: {
       divingFishImportToken?: string | null;
       lxnsImportToken?: string | null;
+      profile?: UserNetProfile | null;
     },
   ) {
     if (!isValidObjectId(id)) {
       throw new NotFoundException('User not found');
     }
 
-    const updated = await this.userModel.findByIdAndUpdate(
-      id,
-      {
-        divingFishImportToken: input.divingFishImportToken ?? null,
-        lxnsImportToken: input.lxnsImportToken ?? null,
-      },
-      { new: true },
-    );
+    const updateDoc: Record<string, unknown> = {};
+    if ('divingFishImportToken' in input) {
+      updateDoc.divingFishImportToken = input.divingFishImportToken ?? null;
+    }
+    if ('lxnsImportToken' in input) {
+      updateDoc.lxnsImportToken = input.lxnsImportToken ?? null;
+    }
+    if ('profile' in input) {
+      updateDoc.profile = input.profile ?? null;
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(id, updateDoc, {
+      new: true,
+    });
 
     if (!updated) {
       throw new NotFoundException('User not found');

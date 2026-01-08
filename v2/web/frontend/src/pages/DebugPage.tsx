@@ -1,6 +1,7 @@
 import "../App.css";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../providers/AuthProvider";
 
 type LoginRequest = { jobId: string; userId: string };
 
@@ -89,7 +90,7 @@ function DebugPage() {
   const [skipUpdateScore, setSkipUpdateScore] = useState(true);
   const [loginReq, setLoginReq] = useState<LoginRequest | null>(null);
   const [jobStatus, setJobStatus] = useState<string>("");
-  const [token, setToken] = useState<string>("");
+  const { token, setToken } = useAuth();
   const [profileResp, setProfileResp] = useState<string>("");
   const [profilePatchResp, setProfilePatchResp] = useState<string>("");
   const [profileTokenInput, setProfileTokenInput] = useState<string>("");

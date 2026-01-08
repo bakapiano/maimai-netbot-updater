@@ -47,6 +47,12 @@ export class SyncController {
     return this.syncs.listByFriendCode(friendCode);
   }
 
+  @Get('latest')
+  async latest(@Req() req: AuthedRequest) {
+    const friendCode = requireFriendCode(req);
+    return this.syncs.getLatestWithScores(friendCode);
+  }
+
   @Get(':id')
   async detail(@Param('id') id: string, @Req() req: AuthedRequest) {
     const friendCode = requireFriendCode(req);

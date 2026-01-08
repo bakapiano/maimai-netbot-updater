@@ -39,7 +39,7 @@ export function convertSyncScoreToDivingFishRecord(
     fc: score.fc ?? null,
     fs: score.fs ?? null,
     level_index: score.chartIndex,
-    title: score.title,
+    title: score.songMetadata?.title || '未知曲目',
     type: mapType(score.type),
   };
 }

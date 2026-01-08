@@ -8,6 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
+import ScorePage from "./pages/ScorePage";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -31,6 +32,7 @@ function App() {
               }
             >
               <Route path="/app" element={<HomePage />} />
+              <Route path="/app/scores" element={<ScorePage />} />
               <Route path="/app/debug" element={<DebugPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/login" replace />} />
