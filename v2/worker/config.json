@@ -6,10 +6,10 @@
         "fetchRetryCount": 3,
         "redirectUrl": "http://192.168.6.165:3999/",
         "httpProxy": {
-            "port": 2560
+            "port": 2222
         },
         "jobService": {
-            "baseUrl": "http://192.168.6.165:3000"
+            "baseUrl": "http://192.168.6.165:9050"
         }
     },
     "production": {

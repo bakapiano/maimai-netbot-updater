@@ -17,8 +17,13 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  const systemSans =
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'";
   return (
-    <MantineProvider defaultColorScheme="dark">
+    <MantineProvider
+      defaultColorScheme="dark"
+      theme={{ fontFamily: systemSans, headings: { fontFamily: systemSans } }}
+    >
       <Notifications position="top-center" />
       <BrowserRouter>
         <AuthProvider>

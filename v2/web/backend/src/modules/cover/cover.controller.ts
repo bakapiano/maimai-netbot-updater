@@ -19,6 +19,9 @@ export class CoverController {
       res.status(404).send('Not found');
       return;
     }
+
+    // Encourage long-lived browser/proxy caching for cover images
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.sendFile(path);
   }
 }

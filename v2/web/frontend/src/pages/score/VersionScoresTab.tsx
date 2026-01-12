@@ -1,0 +1,317 @@
+import {
+  Badge,
+  Button,
+  Divider,
+  Group,
+  Select,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import {
+  MinimalMusicScoreCard,
+  renderRank,
+} from "../../components/MusicScoreCard";
+import type { MusicChartPayload, MusicRow } from "../../types/music";
+import { useMemo, useState } from "react";
+
+import type { SyncScore } from "../../types/syncScore";
+
+type ChartEntry = {
+  music: MusicRow;
+  chart: MusicChartPayload;
+  chartIndex: number;
+  score?: SyncScore;
+};
+
+type LevelGroup = {
+  levelKey: string;
+  levelNumeric: number | null;
+  items: ChartEntry[];
+};
+
+type VersionBucket = {
+  versionKey: string;
+  levels: LevelGroup[];
+};
+
+const parseLevelValue = (value: string) => {
+  const match = /^([0-9]+(?:\.[0-9]+)?)(\+)?$/.exec(value.trim());
+  if (!match) return null;
+  const base = parseFloat(match[1]);
+  if (!Number.isFinite(base)) return null;
+  return base + (match[2] ? 0.1 : 0);
+};
+
+const normalizeLevelKey = (chart: MusicChartPayload) => {
+  if (chart.level) return chart.level;
+  if (typeof chart.detailLevel === "number")
+    return chart.detailLevel.toFixed(1);
+  return "?";
+};
+
+const detailSortValue = (chart: MusicChartPayload) => {
+  if (typeof chart.detailLevel === "number") return chart.detailLevel;
+  if (chart.level) {
+    const parsed = parseLevelValue(chart.level);
+    if (parsed !== null) return parsed;
+  }
+  return -Infinity;
+};
+
+const buildBuckets = (
+  musics: MusicRow[],
+  scores: SyncScore[]
+): VersionBucket[] => {
+  const scoreMap = new Map<string, SyncScore>();
+  for (const s of scores) {
+    const key = `${s.musicId}-${s.chartIndex}`;
+    scoreMap.set(key, s);
+  }
+
+  const versionMap = new Map<string, Map<string, ChartEntry[]>>();
+
+  for (const music of musics) {
+    const charts = music.charts ?? [];
+    const versionKey = music.version || "未知版本";
+    const levelMap =
+      versionMap.get(versionKey) ?? new Map<string, ChartEntry[]>();
+    if (!versionMap.has(versionKey)) versionMap.set(versionKey, levelMap);
+
+    charts.forEach((chart, idx) => {
+      const levelKey = normalizeLevelKey(chart);
+      const list = levelMap.get(levelKey) ?? [];
+      if (!levelMap.has(levelKey)) levelMap.set(levelKey, list);
+
+      list.push({
+        music,
+        chart,
+        chartIndex: idx,
+        score: scoreMap.get(`${music.id}-${idx}`),
+      });
+    });
+  }
+
+  const buckets: VersionBucket[] = Array.from(versionMap.entries()).map(
+    ([versionKey, levelMap]) => ({
+      versionKey,
+      levels: Array.from(levelMap.entries())
+        .map(([levelKey, items]) => ({
+          levelKey,
+          levelNumeric: parseLevelValue(levelKey),
+          items: items.sort(
+            (a, b) => detailSortValue(b.chart) - detailSortValue(a.chart)
+          ),
+        }))
+        .sort(
+          (a, b) =>
+            (b.levelNumeric ?? -Infinity) - (a.levelNumeric ?? -Infinity)
+        ),
+    })
+  );
+
+  // newest versions first (fallback alphabetic), unknown versions last
+  buckets.sort((a, b) => {
+    const aUnknown = a.versionKey === "未知版本";
+    const bUnknown = b.versionKey === "未知版本";
+    if (aUnknown && !bUnknown) return 1;
+    if (!aUnknown && bUnknown) return -1;
+    return b.versionKey.localeCompare(a.versionKey);
+  });
+
+  return buckets;
+};
+
+const rankOrder = ["SSS+", "SSS", "SS+", "SS", "S+", "S"] as const;
+type RankBucket = (typeof rankOrder)[number];
+
+const emptyCounts = (): Record<RankBucket, number> => ({
+  "SSS+": 0,
+  SSS: 0,
+  "SS+": 0,
+  SS: 0,
+  "S+": 0,
+  S: 0,
+});
+
+const scoreToRank = (scoreText?: string | null): RankBucket | null => {
+  if (!scoreText) return null;
+  const val = parseFloat(scoreText.replace("%", ""));
+  if (!Number.isFinite(val)) return null;
+  if (val >= 100.5) return "SSS+";
+  if (val >= 100) return "SSS";
+  if (val >= 99.5) return "SS+";
+  if (val >= 99) return "SS";
+  if (val >= 98) return "S+";
+  if (val >= 97) return "S";
+  return null;
+};
+
+const summarizeRanks = (entries: ChartEntry[]) => {
+  const counts = emptyCounts();
+  for (const entry of entries) {
+    const rank = scoreToRank(
+      entry.score?.score ?? entry.score?.dxScore ?? null
+    );
+    if (!rank) continue;
+    const idx = rankOrder.indexOf(rank);
+    for (let i = idx; i < rankOrder.length; i++) {
+      counts[rankOrder[i]] += 1;
+    }
+  }
+  return { counts, total: entries.length };
+};
+
+const renderRankBadges = (
+  summary: { counts: Record<RankBucket, number>; total: number },
+  size: "xs" | "sm" = "xs"
+) => (
+  <Group gap={6} wrap="wrap">
+    {rankOrder.map((r) => (
+      <Badge key={r} size={size} variant="light" color="blue" radius="sm">
+        {renderRank(r, { compact: true })} {summary.counts[r]}/{summary.total}
+      </Badge>
+    ))}
+  </Group>
+);
+
+type VersionScoresTabProps = {
+  musics: MusicRow[];
+  scores: SyncScore[];
+  lastSyncAt: string | null;
+  loading: boolean;
+};
+
+export function VersionScoresTab({
+  musics,
+  scores,
+  loading,
+}: VersionScoresTabProps) {
+  const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const [showAllLevels, setShowAllLevels] = useState(false);
+
+  const filteredMusics = useMemo(
+    () => musics.filter((m) => m.type !== "utage"),
+    [musics]
+  );
+  const filteredScores = useMemo(
+    () => scores.filter((s) => s.type !== "utage"),
+    [scores]
+  );
+
+  const buckets = useMemo(
+    () => buildBuckets(filteredMusics, filteredScores),
+    [filteredMusics, filteredScores]
+  );
+  const versionOptions = buckets.map((b) => ({
+    value: b.versionKey,
+    label: b.versionKey,
+  }));
+  const current =
+    buckets.find((b) => b.versionKey === selectedVersion) ?? buckets[0];
+
+  const detailThreshold = 13;
+
+  const currentVisibleEntries = useMemo(() => {
+    if (!current) return [] as ChartEntry[];
+    return current.levels.flatMap((lvl) =>
+      showAllLevels
+        ? lvl.items
+        : lvl.items.filter(
+            (entry) => detailSortValue(entry.chart) >= detailThreshold
+          )
+    );
+  }, [current, showAllLevels]);
+
+  return (
+    <Stack gap="md">
+      <Group justify="space-between" align="center">
+        <Group gap={8} align="center">
+          <Title order={4} size="h4">
+            按版本查看
+          </Title>
+        </Group>
+      </Group>
+
+      {buckets.length > 0 && (
+        <Select
+          data={versionOptions}
+          value={current?.versionKey ?? null}
+          onChange={setSelectedVersion}
+          label="选择版本"
+          placeholder="选择要查看的版本"
+          clearable={false}
+          searchable
+        />
+      )}
+
+      {loading ? (
+        <Text size="sm">加载中...</Text>
+      ) : !current ? (
+        <Text size="sm" c="dimmed">
+          暂无数据
+        </Text>
+      ) : (
+        <Stack gap="lg">
+          {renderRankBadges(summarizeRanks(currentVisibleEntries), "sm")}
+          {current.levels.map((level, idx) => {
+            const visibleItems = showAllLevels
+              ? level.items
+              : level.items.filter(
+                  (entry) => detailSortValue(entry.chart) >= detailThreshold
+                );
+            if (visibleItems.length === 0) return null;
+            const isLastVisible = (() => {
+              for (let j = idx + 1; j < current.levels.length; j++) {
+                const nxt = current.levels[j];
+                const nxtVisible = showAllLevels
+                  ? nxt.items
+                  : nxt.items.filter(
+                      (entry) => detailSortValue(entry.chart) >= detailThreshold
+                    );
+                if (nxtVisible.length > 0) return false;
+              }
+              return true;
+            })();
+
+            return (
+              <Stack key={`${current.versionKey}-${level.levelKey}`} gap="sm">
+                <Group justify="space-between" align="center">
+                  <Text fw={700}>{level.levelKey}</Text>
+                  <Badge variant="light" color="gray">
+                    {visibleItems.length} 首
+                  </Badge>
+                </Group>
+                {renderRankBadges(summarizeRanks(visibleItems))}
+                <Group gap="4" align="stretch" wrap="wrap">
+                  {visibleItems.map((entry) => (
+                    <MinimalMusicScoreCard
+                      key={`${entry.music.id}-${entry.chartIndex}`}
+                      musicId={entry.music.id}
+                      chartIndex={entry.chartIndex}
+                      type={entry.music.type}
+                      score={entry.score?.score || entry.score?.dxScore || null}
+                      fs={entry.score?.fs ?? null}
+                      fc={entry.score?.fc ?? null}
+                    />
+                  ))}
+                </Group>
+                {!isLastVisible && <Divider />}
+              </Stack>
+            );
+          })}
+
+          <Group justify="center">
+            <Button
+              size="xs"
+              variant="light"
+              onClick={() => setShowAllLevels((v) => !v)}
+            >
+              {showAllLevels ? "只看 13+" : "显示全部等级"}
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Stack>
+  );
+}

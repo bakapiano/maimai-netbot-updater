@@ -1,8 +1,9 @@
-import { AppShell, Button, Group, NavLink, Text } from "@mantine/core";
+import { AppShell, Burger, Button, Group, NavLink, Text } from "@mantine/core";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { ColorSchemeToggle } from "../components/ColorSchemeToggle";
 import { useAuth } from "../providers/AuthProvider";
+import { useDisclosure } from "@mantine/hooks";
 
 const links = [
   { label: "Home", to: "/app" },
@@ -14,6 +15,7 @@ export default function AuthedLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { clearToken } = useAuth();
+  const [opened, { toggle }] = useDisclosure(false);
 
   const handleLogout = () => {
     clearToken();
@@ -23,12 +25,24 @@ export default function AuthedLayout() {
   return (
     <AppShell
       header={{ height: 56 }}
-      navbar={{ width: 200, breakpoint: "sm" }}
+      navbar={{
+        width: 220,
+        breakpoint: "sm",
+        collapsed: { mobile: !opened },
+      }}
       padding="md"
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
-          <Text fw={700}>maimai DX Copilot</Text>
+          <Group gap="sm">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+            />
+            <Text fw={700}>maimai DX Copilot</Text>
+          </Group>
           <Group>
             <ColorSchemeToggle />
             <Button variant="light" onClick={handleLogout} size="xs">
@@ -38,7 +52,7 @@ export default function AuthedLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p="md" withBorder>
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -51,7 +65,15 @@ export default function AuthedLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Outlet />
+        <div
+          style={{
+            maxWidth: 1225,
+            margin: "0 auto",
+            width: "100%",
+          }}
+        >
+          <Outlet />
+        </div>
       </AppShell.Main>
     </AppShell>
   );

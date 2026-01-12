@@ -1,9 +1,9 @@
 import type { JobStage, JobStatus } from './job.types';
-import type { UserNetProfile } from '../users/user.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 import type { HydratedDocument } from 'mongoose';
 import { Schema as MongooseSchema } from 'mongoose';
+import type { UserNetProfile } from '../users/user.types';
 
 @Schema({ collection: 'jobs' })
 export class JobEntity {
@@ -22,10 +22,10 @@ export class JobEntity {
   @Prop({ type: String, default: null })
   friendRequestSentAt!: string | null;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: String })
   status!: JobStatus;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: String })
   stage!: JobStage;
 
   @Prop({ type: MongooseSchema.Types.Mixed, default: undefined })

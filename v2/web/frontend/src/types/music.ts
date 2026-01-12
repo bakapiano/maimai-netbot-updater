@@ -1,0 +1,17 @@
+export type MusicChartPayload = {
+  level?: string;
+  detailLevel?: number | null;
+  charter?: string | null;
+};
+
+export type MusicRow = {
+  id: string;
+  title: string;
+  type: string;
+  artist?: string | null;
+  category?: string | null;
+  bpm?: number | string | null;
+  version?: string | null;
+  isNew?: boolean | null;
+  charts?: MusicChartPayload[];
+};
