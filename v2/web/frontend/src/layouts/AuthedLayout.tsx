@@ -65,7 +65,7 @@ export default function AuthedLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { clearToken } = useAuth();
-  const [opened, { toggle }] = useDisclosure(false);
+  const [opened, { toggle, close }] = useDisclosure(false);
   const { colorScheme } = useMantineColorScheme();
 
   const currentPage = pages.find((p) => p.to === location.pathname);
@@ -119,6 +119,7 @@ export default function AuthedLayout() {
             label={page.label}
             leftSection={page.icon}
             active={location.pathname === page.to}
+            onClick={close}
           />
         ))}
       </AppShell.Navbar>
