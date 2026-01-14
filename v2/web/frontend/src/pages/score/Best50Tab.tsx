@@ -144,9 +144,8 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
             >
               {ratingSummary.newTop.slice(0, 15).map((score) => {
                 const music = musicMap.get(score.musicId);
-                const chart = chartMap.get(
-                  `${score.musicId}:${score.chartIndex}`
-                );
+                const chart =
+                  score.cid != null ? chartMap.get(score.cid) : undefined;
                 return (
                   <CompactMusicScoreCard
                     key={`new-${score.musicId}-${score.type}-${score.chartIndex}`}
@@ -187,9 +186,8 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
             >
               {ratingSummary.oldTop.slice(0, 35).map((score) => {
                 const music = musicMap.get(score.musicId);
-                const chart = chartMap.get(
-                  `${score.musicId}:${score.chartIndex}`
-                );
+                const chart =
+                  score.cid != null ? chartMap.get(score.cid) : undefined;
                 return (
                   <CompactMusicScoreCard
                     key={`old-${score.musicId}-${score.type}-${score.chartIndex}`}

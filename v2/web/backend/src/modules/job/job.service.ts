@@ -29,6 +29,7 @@ function toJobResponse(job: JobEntity): JobResponse {
     stage: job.stage,
     result: job.result,
     profile: job.profile,
+    scoreProgress: job.scoreProgress ?? null,
     error: job.error ?? null,
     executing: job.executing,
     createdAt: job.createdAt.toISOString(),
@@ -155,6 +156,8 @@ export class JobService {
 
   async patch(jobId: string, body: any): Promise<JobResponse> {
     const update: Partial<JobEntity> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const additionalOps: Record<string, any> = {};
 
     if (body.botUserFriendCode !== undefined) {
       if (
@@ -229,9 +232,30 @@ export class JobService {
       update.updatedAt = new Date();
     }
 
+    // 处理 scoreProgress：完整替换模式
+    if (body.scoreProgress !== undefined) {
+      update.scoreProgress = body.scoreProgress;
+    }
+
+    // 处理 addCompletedDiff：原子追加模式（使用 $addToSet 避免并发冲突）
+    if (body.addCompletedDiff !== undefined) {
+      if (typeof body.addCompletedDiff !== 'number') {
+        throw new BadRequestException('addCompletedDiff must be a number');
+      }
+      additionalOps.$addToSet = {
+        'scoreProgress.completedDiffs': body.addCompletedDiff,
+      };
+    }
+
+    // 构建更新操作
+    const updateOps: Record<string, unknown> = {
+      $set: update,
+      ...additionalOps,
+    };
+
     const updated = await this.jobModel.findOneAndUpdate(
       { id: jobId },
-      { $set: update },
+      updateOps,
       { new: true },
     );
 

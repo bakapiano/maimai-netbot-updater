@@ -75,3 +75,8 @@ v2/web/backend/covers/
 
 # backend dist
 v2/web/backend/dist
+
+
+debug-html/
+friend-vs/
+log/

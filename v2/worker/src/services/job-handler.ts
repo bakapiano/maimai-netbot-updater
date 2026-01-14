@@ -3,16 +3,16 @@
  * 负责处理单个同步任务的完整生命周期
  */
 
+import type { AggregatedScoreResult, Job, JobPatch } from "../types/index.ts";
+import { DIFFICULTIES, TIMEOUTS } from "../constants.ts";
 import { dirname, join } from "node:path";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 
-import type { Job, JobPatch, AggregatedScoreResult } from "../types/index.ts";
-import { MaimaiHttpClient } from "./maimai-client.ts";
 import { FriendManager } from "./friend-manager.ts";
+import { MaimaiHttpClient } from "./maimai-client.ts";
 import { ScoreAggregator } from "./score-aggregator.ts";
+import { randomUUID } from "node:crypto";
 import { updateJob } from "../job-service-client.ts";
-import { TIMEOUTS } from "../constants.ts";
 
 export interface JobHandlerConfig {
   /** 是否跳过好友清理 */
@@ -167,6 +167,16 @@ export class JobHandler {
 
     console.log(`[JobHandler] Job ${this.job.id}: Updating scores...`);
 
+    // 初始化进度跟踪
+    const totalDiffs = DIFFICULTIES.length;
+    let completedCount = 0;
+
+    // 初始化进度状态
+    await this.applyPatch({
+      scoreProgress: { completedDiffs: [], totalDiffs },
+      updatedAt: new Date(),
+    });
+
     let aggregated: AggregatedScoreResult;
 
     if (this.config.useMockResult) {
@@ -174,6 +184,11 @@ export class JobHandler {
         `[JobHandler] Job ${this.job.id}: Using mock result (MOCK_RESULT_PATH=${this.config.mockResultPath}).`
       );
       aggregated = await this.loadMockResult();
+      // Mock 模式下直接标记所有难度完成
+      await this.applyPatch({
+        scoreProgress: { completedDiffs: [...DIFFICULTIES], totalDiffs },
+        updatedAt: new Date(),
+      });
     } else {
       console.log(
         `[JobHandler] Job ${this.job.id}: Fetching scores for all diffs...`
@@ -184,6 +199,17 @@ export class JobHandler {
           dumpHtml: this.config.dumpFriendVsHtml
             ? (html, meta) => this.dumpFriendVsHtml(html, meta)
             : undefined,
+          onDiffCompleted: async (diff: number) => {
+            completedCount++;
+            console.log(
+              `[JobHandler] Job ${this.job.id}: Diff ${diff} completed (${completedCount}/${totalDiffs})`
+            );
+            // 使用 addCompletedDiff 原子操作，避免并发冲突
+            await this.applyPatch({
+              addCompletedDiff: diff,
+              updatedAt: new Date(),
+            });
+          },
         }
       );
 

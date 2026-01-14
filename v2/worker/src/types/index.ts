@@ -45,6 +45,17 @@ export type JobStatus =
 
 export type JobStage = "send_request" | "wait_acceptance" | "update_score";
 
+/**
+ * 成绩更新进度
+ * 记录每个难度的获取状态
+ */
+export interface ScoreProgress {
+  /** 已完成的难度列表 */
+  completedDiffs: number[];
+  /** 总难度数量 */
+  totalDiffs: number;
+}
+
 export interface Job {
   id: string;
   friendCode: string;
@@ -57,6 +68,7 @@ export interface Job {
   profile?: UserProfile;
   error?: string | null;
   executing?: boolean;
+  scoreProgress?: ScoreProgress | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +87,9 @@ export interface JobPatch {
   profile?: UserProfile;
   error?: string | null;
   executing?: boolean;
+  scoreProgress?: ScoreProgress | null;
+  /** 原子操作：向 completedDiffs 添加一个难度（使用 MongoDB $addToSet） */
+  addCompletedDiff?: number;
   updatedAt?: Date;
 }
 

@@ -3,14 +3,15 @@
  * 负责获取和聚合 Friend VS 成绩数据
  */
 
-import { MaimaiHttpClient } from "./maimai-client.ts";
-import { parseFriendVsSongs } from "../parsers/index.ts";
-import { DIFFICULTIES, WORKER_DEFAULTS } from "../constants.ts";
 import type {
   AggregatedScoreResult,
   FriendVsSong,
   ParsedScoreResult,
 } from "../types/index.ts";
+import { DIFFICULTIES, WORKER_DEFAULTS } from "../constants.ts";
+
+import { MaimaiHttpClient } from "./maimai-client.ts";
+import { parseFriendVsSongs } from "../parsers/index.ts";
 
 export interface ScoreFetchOptions {
   /** 是否导出 HTML（调试用） */
@@ -20,6 +21,8 @@ export interface ScoreFetchOptions {
   ) => Promise<void>;
   /** 并发数 */
   concurrency?: number;
+  /** 难度完成回调（每完成一个难度的两种类型时调用） */
+  onDiffCompleted?: (diff: number) => Promise<void>;
 }
 
 /**
@@ -39,11 +42,26 @@ export class ScoreAggregator {
     friendCode: string,
     options: ScoreFetchOptions = {}
   ): Promise<AggregatedScoreResult> {
-    const { dumpHtml, concurrency = WORKER_DEFAULTS.friendVSConcurrency } =
-      options;
+    const {
+      dumpHtml,
+      concurrency = WORKER_DEFAULTS.friendVSConcurrency,
+      onDiffCompleted,
+    } = options;
 
     // 收藏好友以解锁 Friend VS 功能
     await this.client.favoriteOnFriend(friendCode);
+
+    // 跟踪每个难度的完成状态（需要两种类型都完成）
+    const diffCompletionCount = new Map<number, number>();
+    const notifyDiffCompleted = async (diff: number) => {
+      if (!onDiffCompleted) return;
+      const count = (diffCompletionCount.get(diff) ?? 0) + 1;
+      diffCompletionCount.set(diff, count);
+      // 每个难度有两种类型（dxScore 和 score），都完成后才通知
+      if (count >= 2) {
+        await onDiffCompleted(diff);
+      }
+    };
 
     const tasks: Array<() => Promise<ParsedScoreResult>> = [];
 
@@ -54,7 +72,13 @@ export class ScoreAggregator {
         if (dumpHtml) {
           await dumpHtml(result, { type: 1, diff });
         }
-        return { diff, type: 1 as const, songs: parseFriendVsSongs(result) };
+        const parsed = {
+          diff,
+          type: 1 as const,
+          songs: parseFriendVsSongs(result),
+        };
+        await notifyDiffCompleted(diff);
+        return parsed;
       });
 
       // scoreType 2 = score (达成率)
@@ -63,7 +87,13 @@ export class ScoreAggregator {
         if (dumpHtml) {
           await dumpHtml(result, { type: 2, diff });
         }
-        return { diff, type: 2 as const, songs: parseFriendVsSongs(result) };
+        const parsed = {
+          diff,
+          type: 2 as const,
+          songs: parseFriendVsSongs(result),
+        };
+        await notifyDiffCompleted(diff);
+        return parsed;
       });
     }
 

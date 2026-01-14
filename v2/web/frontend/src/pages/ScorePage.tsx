@@ -1,14 +1,14 @@
-import { Group, Loader, Stack, Tabs, Text, Title } from "@mantine/core";
+import { Group, Loader, Stack, Tabs, Text } from "@mantine/core";
+import {
+  IconChartBar,
+  IconList,
+  IconTrophy,
+  IconVersions,
+} from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { AllScoresTab } from "./score/AllScoresTab";
 import { Best50Tab } from "./score/Best50Tab";
-import {
-  IconTrophy,
-  IconChartBar,
-  IconVersions,
-  IconList,
-} from "@tabler/icons-react";
 import { LevelScoresTab } from "./score/LevelScoresTab";
 import type { SyncScore } from "../types/syncScore";
 import { VersionScoresTab } from "./score/VersionScoresTab";
@@ -85,27 +85,6 @@ export default function ScorePage() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={3}>乐曲成绩</Title>
-          <Text size="sm" c="dimmed">
-            最近同步时间:{" "}
-            {lastSyncAt ? new Date(lastSyncAt).toLocaleString() : "N/A"}
-          </Text>
-        </div>
-        {/* <Button
-          variant="light"
-          size="sm"
-          leftSection={
-            loading ? <Loader size="xs" /> : <IconRefresh size={16} />
-          }
-          onClick={loadScores}
-          disabled={loading}
-        >
-          重新获取
-        </Button> */}
-      </Group>
-
       <Tabs defaultValue="best">
         <Tabs.List>
           <Tabs.Tab value="best" leftSection={<IconTrophy size={16} />}>

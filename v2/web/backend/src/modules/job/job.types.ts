@@ -6,7 +6,19 @@ export type JobStatus =
   | 'canceled';
 export type JobStage = 'send_request' | 'wait_acceptance' | 'update_score';
 
+/**
+ * 成绩更新进度
+ * 记录每个难度的获取状态
+ */
+export interface ScoreProgress {
+  /** 已完成的难度列表 */
+  completedDiffs: number[];
+  /** 总难度数量 */
+  totalDiffs: number;
+}
+
 import type { UserNetProfile } from '../users/user.types';
+
 export type UserProfile = UserNetProfile;
 
 export interface JobResponse {
@@ -21,6 +33,7 @@ export interface JobResponse {
   profile?: UserProfile;
   error?: string | null;
   executing?: boolean;
+  scoreProgress?: ScoreProgress | null;
   createdAt: string;
   updatedAt: string;
 }

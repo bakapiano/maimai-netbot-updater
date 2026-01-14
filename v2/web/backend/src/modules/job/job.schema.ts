@@ -1,4 +1,4 @@
-import type { JobStage, JobStatus } from './job.types';
+import type { JobStage, JobStatus, ScoreProgress } from './job.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 import type { HydratedDocument } from 'mongoose';
@@ -39,6 +39,9 @@ export class JobEntity {
 
   @Prop({ required: true, default: false })
   executing!: boolean;
+
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  scoreProgress!: ScoreProgress | null;
 
   @Prop({ required: true })
   createdAt!: Date;

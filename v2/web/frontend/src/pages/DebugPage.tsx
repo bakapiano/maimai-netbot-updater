@@ -1,6 +1,7 @@
 import "../App.css";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { useAuth } from "../providers/AuthProvider";
 
 type LoginRequest = { jobId: string; userId: string };
@@ -293,9 +294,7 @@ function DebugPage() {
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: "24px auto", padding: "0 16px" }}>
-      <h1>Login flow tester (legacy)</h1>
-
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px" }}>
       <div
         style={{
           display: "flex",

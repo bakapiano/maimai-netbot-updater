@@ -21,7 +21,6 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IconAlertCircle,
   IconChevronDown,
@@ -30,15 +29,17 @@ import {
   IconSelector,
   IconX,
 } from "@tabler/icons-react";
-import type { SyncScore } from "../../types/syncScore";
-import { renderRank } from "../../components/MusicScoreCard";
-import { useMusic } from "../../providers/MusicProvider";
 import {
-  calculateAverageScore,
   ScoreSummaryCard,
+  calculateAverageScore,
   summarizeRanks,
   summarizeStatuses,
 } from "../../components/ScoreSummaryBadges";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import type { SyncScore } from "../../types/syncScore";
+import { renderRank } from "../../components/MusicScoreCard";
+import { useMusic } from "../../providers/MusicProvider";
 
 const FALLBACK_COVER =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><rect width='100%25' height='100%25' fill='%23222931'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%238a8f98' font-size='10'>Cover</text></svg>";
@@ -50,6 +51,7 @@ const LEVEL_COLORS: Record<number, string> = {
   2: "#fc4255", // Expert
   3: "#9a15ff", // Master
   4: "#dc9fff", // Re:Master
+  10: "#ff69b4", // Utage
 };
 
 const DIFFICULTY_NAMES: Record<number, string> = {
@@ -58,6 +60,7 @@ const DIFFICULTY_NAMES: Record<number, string> = {
   2: "Expert",
   3: "Master",
   4: "Re:Master",
+  10: "Utage",
 };
 
 type SortKey =
@@ -187,7 +190,7 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
 
     scores.forEach((s) => {
       const music = musicMap.get(s.musicId);
-      const chart = chartMap.get(`${s.musicId}:${s.chartIndex}`);
+      const chart = s.cid != null ? chartMap.get(s.cid) : undefined;
       if (music?.category) categories.add(music.category);
       if (s.type) versions.add(s.type.toUpperCase());
       if (music?.version) musicVersions.add(music.version);
@@ -207,7 +210,7 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
   const filteredScores = useMemo(() => {
     return scores.filter((s) => {
       const music = musicMap.get(s.musicId);
-      const chart = chartMap.get(`${s.musicId}:${s.chartIndex}`);
+      const chart = s.cid != null ? chartMap.get(s.cid) : undefined;
       if (
         categoryFilter.length > 0 &&
         !categoryFilter.includes(music?.category || "")
@@ -274,8 +277,8 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
           break;
         }
         case "detailLevel": {
-          const chartA = chartMap.get(`${a.musicId}:${a.chartIndex}`);
-          const chartB = chartMap.get(`${b.musicId}:${b.chartIndex}`);
+          const chartA = a.cid != null ? chartMap.get(a.cid) : undefined;
+          const chartB = b.cid != null ? chartMap.get(b.cid) : undefined;
           const lvA =
             typeof chartA?.detailLevel === "number" ? chartA.detailLevel : 0;
           const lvB =
@@ -774,9 +777,11 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
           <Table.Tbody>
             {paginatedScores.map((score, idx) => {
               const music = musicMap.get(score.musicId);
-              const chart = chartMap.get(
-                `${score.musicId}:${score.chartIndex}`
-              );
+              const chart =
+                score.cid != null ? chartMap.get(score.cid) : undefined;
+              if (!chart) {
+                console.log("Missing chart for score:", score);
+              }
               const name = music?.title || score.musicId;
               const artist = music?.artist;
               const coverUrl = `/api/cover/${score.musicId}`;

@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Box,
   Card,
   Divider,
@@ -10,17 +11,19 @@ import {
   Title,
 } from "@mantine/core";
 import {
-  calculateAverageScore,
   CombinedBadges,
   ScoreSummaryCard,
+  calculateAverageScore,
   summarizeRanks,
   summarizeStatuses,
 } from "../../components/ScoreSummaryBadges";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { MusicChartPayload, MusicRow } from "../../types/music";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import { MinimalMusicScoreCard } from "../../components/MusicScoreCard";
 import type { SyncScore } from "../../types/syncScore";
+import classes from "./LevelScoresTab.module.css";
 
 type ChartEntry = {
   music: MusicRow;
@@ -160,6 +163,53 @@ export function LevelScoresTab({
     return current.details.flatMap((d) => d.items);
   }, [current]);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeftPos = useRef(0);
+
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -150, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 150, behavior: "smooth" });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDragging.current = true;
+    startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeftPos.current = scrollContainerRef.current.scrollLeft;
+    scrollContainerRef.current.style.cursor = "grabbing";
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    scrollContainerRef.current.scrollLeft = scrollLeftPos.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = "grab";
+    }
+  };
+
+  const handleMouseLeave = () => {
+    isDragging.current = false;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = "grab";
+    }
+  };
+
   return (
     <Stack gap="md">
       <Box>
@@ -170,23 +220,76 @@ export function LevelScoresTab({
         </Group>
 
         {buckets.length > 0 && (
-          <Box style={{ overflowX: "auto" }}>
-            <SegmentedControl
-              value={current?.levelKey ?? ""}
-              onChange={(value) =>
-                startTransition(() => setSelectedLevel(value))
-              }
-              data={buckets.map((b) => ({
-                value: b.levelKey,
-                label: b.levelKey,
-              }))}
-              disabled={isPending}
-              size="md"
+          <Box pos="relative">
+            <ActionIcon
+              variant="filled"
               color="blue"
-              styles={{
-                label: { minWidth: 48, textAlign: "center" },
+              size="md"
+              radius="xl"
+              onClick={scrollLeft}
+              aria-label="向左滚动"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
               }}
-            />
+            >
+              <IconChevronLeft size={18} />
+            </ActionIcon>
+            <Box
+              ref={scrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              style={{
+                overflowX: "auto",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-x",
+                cursor: "grab",
+                userSelect: "none",
+                paddingLeft: 36,
+                paddingRight: 36,
+              }}
+            >
+              <SegmentedControl
+                value={current?.levelKey ?? ""}
+                onChange={(value) =>
+                  startTransition(() => setSelectedLevel(value))
+                }
+                data={buckets.map((b) => ({
+                  value: b.levelKey,
+                  label: b.levelKey,
+                }))}
+                disabled={isPending}
+                size="md"
+                color="blue"
+                className={classes.levelSelector}
+              />
+            </Box>
+            <ActionIcon
+              variant="filled"
+              color="blue"
+              size="md"
+              radius="xl"
+              onClick={scrollRight}
+              aria-label="向右滚动"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              }}
+            >
+              <IconChevronRight size={18} />
+            </ActionIcon>
           </Box>
         )}
       </Box>

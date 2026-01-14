@@ -1,0 +1,9 @@
+.levelSelector :global(.mantine-SegmentedControl-label) {
+  min-width: 48px;
+  text-align: center;
+  color: var(--mantine-color-blue-6);
+}
+
+.levelSelector :global(.mantine-SegmentedControl-label[data-active]) {
+  color: white;
+}

@@ -10,6 +10,7 @@ import { MusicProvider } from "./providers/MusicProvider";
 import { Notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
 import ScorePage from "./pages/ScorePage";
+import SyncPage from "./pages/SyncPage";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -39,6 +40,7 @@ function App() {
                 }
               >
                 <Route path="/app" element={<HomePage />} />
+                <Route path="/app/sync" element={<SyncPage />} />
                 <Route path="/app/scores" element={<ScorePage />} />
                 <Route path="/app/debug" element={<DebugPage />} />
               </Route>

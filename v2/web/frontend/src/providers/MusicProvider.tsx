@@ -1,3 +1,4 @@
+import type { MusicChartPayload, MusicRow } from "../types/music";
 import {
   createContext,
   useCallback,
@@ -6,13 +7,16 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { MusicRow, MusicChartPayload } from "../types/music";
+
 import { fetchJson } from "../utils/fetch";
 
 type MusicContextValue = {
   musics: MusicRow[];
   musicMap: Map<string, MusicRow>;
-  chartMap: Map<string, MusicChartPayload & { musicId: string; chartIndex: number }>;
+  chartMap: Map<
+    number,
+    MusicChartPayload & { musicId: string; chartIndex: number }
+  >;
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
@@ -51,15 +55,23 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   // Build lookup maps
   const { musicMap, chartMap } = useMemo(() => {
     const mMap = new Map<string, MusicRow>();
-    const cMap = new Map<string, MusicChartPayload & { musicId: string; chartIndex: number }>();
+    const cMap = new Map<
+      number,
+      MusicChartPayload & { musicId: string; chartIndex: number }
+    >();
 
     for (const music of musics) {
       mMap.set(music.id, music);
       if (Array.isArray(music.charts)) {
         music.charts.forEach((chart, idx) => {
-          // Key by musicId + chartIndex
-          const key = `${music.id}:${idx}`;
-          cMap.set(key, { ...chart, musicId: music.id, chartIndex: idx });
+          // Key by cid (chart ID)
+          if (chart.cid != null) {
+            cMap.set(chart.cid, {
+              ...chart,
+              musicId: music.id,
+              chartIndex: idx,
+            });
+          }
         });
       }
     }

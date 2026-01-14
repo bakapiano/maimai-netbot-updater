@@ -3,8 +3,9 @@
  * 与后端 Job Service 通信的 API 客户端
  */
 
-import config from "./config.ts";
 import type { Job, JobPatch, JobResponse } from "./types/index.ts";
+
+import config from "./config.ts";
 
 // Re-export types for backward compatibility
 export type { Job, JobPatch, JobResponse };
@@ -57,6 +58,12 @@ function serializePatch(patch: JobPatch): Record<string, unknown> {
   }
   if (patch.executing !== undefined) {
     body.executing = patch.executing;
+  }
+  if (patch.scoreProgress !== undefined) {
+    body.scoreProgress = patch.scoreProgress;
+  }
+  if (patch.addCompletedDiff !== undefined) {
+    body.addCompletedDiff = patch.addCompletedDiff;
   }
   body.updatedAt = (patch.updatedAt ?? new Date()).toISOString();
 
