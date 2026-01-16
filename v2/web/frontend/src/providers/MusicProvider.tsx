@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { Box, LoadingOverlay } from "@mantine/core";
 import { fetchJson } from "../utils/fetch";
 
 type MusicContextValue = {
@@ -92,7 +93,22 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <MusicContext.Provider value={value}>{children}</MusicContext.Provider>
+    <MusicContext.Provider value={value}>
+      <Box pos="relative" style={{ minHeight: loading ? "100vh" : undefined }}>
+        <LoadingOverlay
+          visible={loading}
+          zIndex={1000}
+          overlayProps={{ blur: 2 }}
+          loaderProps={{ size: "lg", type: "bars" }}
+          pos="fixed"
+          style={{
+            position: "fixed",
+            inset: 0,
+          }}
+        />
+        {children}
+      </Box>
+    </MusicContext.Provider>
   );
 }
 

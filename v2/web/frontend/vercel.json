@@ -1,0 +1,13 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "http://{replace}/api/:path*"
+        },
+        {
+            "source": "/maimai-mobile/img/:path*",
+            "destination": "https://maimai.wahlap.com/maimai-mobile/img/:path*"
+        }
+    ]
+}

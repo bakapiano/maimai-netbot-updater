@@ -96,6 +96,9 @@ export default function SyncPage() {
     "diving-fish" | "lxns" | null
   >(null);
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
   // Fetch last sync info
   const loadLastSync = useCallback(async () => {
     if (!token) return;
@@ -138,6 +141,7 @@ export default function SyncPage() {
     let cancelled = false;
 
     const doLoad = async () => {
+      setLoading(true);
       setProfileError(null);
 
       const res = await fetchJson<UserProfileResponse>("/api/users/profile", {
@@ -164,6 +168,8 @@ export default function SyncPage() {
       if (syncRes.ok && syncRes.data) {
         setLastSync(syncRes.data);
       }
+
+      setLoading(false);
     };
 
     doLoad();
@@ -402,7 +408,18 @@ export default function SyncPage() {
           </Card>
         )}
 
-        {!lastSync && !syncStatus && (
+        {loading && (
+          <Card withBorder padding="md" radius="md">
+            <Stack gap="sm" align="center">
+              <Loader size="sm" />
+              <Text size="sm" c="dimmed">
+                加载中...
+              </Text>
+            </Stack>
+          </Card>
+        )}
+
+        {!loading && !lastSync && !syncStatus && (
           <Card withBorder padding="md" radius="md">
             <Stack gap="sm" align="center">
               <Text size="sm" c="dimmed" ta="center">

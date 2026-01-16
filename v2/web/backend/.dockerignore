@@ -1,0 +1,9 @@
+.env
+.env.example
+node_modules/
+*.log
+.prettierrc
+eslint.config.mjs
+test/
+README.md
+tsconfig.build.json

@@ -116,5 +116,5 @@ export function getCoverUrl(musicId: string): string {
  * Get FC/FS icon URL
  */
 export function getIconUrl(icon: string): string {
-  return `https://maimai.wahlap.com/maimai-mobile/img/music_icon_${icon}.png`;
+  return `/maimai-mobile/img/music_icon_${icon}.png`;
 }

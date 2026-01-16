@@ -100,7 +100,7 @@ export const WORKER_DEFAULTS = {
   /** 最大并发处理任务数 */
   maxProcessJobs: 4,
   /** Worker tick 间隔 (ms) */
-  tickIntervalMs: 500,
+  tickIntervalMs: 5 * 1000,
   /** Friend VS 并发数 */
   friendVSConcurrency: 2,
 } as const;
