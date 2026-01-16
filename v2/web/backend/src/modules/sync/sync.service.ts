@@ -208,7 +208,19 @@ export class SyncService {
       return { status: 'skipped', reason: 'no scores to export' };
     }
 
-    const records = convertSyncScoresToDivingFishRecords(scores);
+    const musics = (await this.musicModel
+      .find()
+      .select({ id: 1, title: 1 })
+      .lean()) as Array<{ id: string; title: string }>;
+    const titleMap = new Map<string, string>();
+    for (const music of musics) {
+      if (music?.id && music?.title) {
+        titleMap.set(music.id, music.title);
+      }
+    }
+
+    const records = convertSyncScoresToDivingFishRecords(scores, titleMap);
+
     const res = await fetch(DIVING_FISH_ENDPOINT, {
       method: 'POST',
       headers: {

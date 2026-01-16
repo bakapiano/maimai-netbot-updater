@@ -27,6 +27,7 @@ import {
 import { ScoreDetailModal } from "../../components/ScoreDetailModal";
 import type { SyncScore } from "../../types/syncScore";
 import { getVersionSortIndex } from "../../constants/versions";
+import { useAuth } from "../../providers/AuthProvider";
 
 type ChartEntry = {
   music: MusicRow;
@@ -147,9 +148,11 @@ export function VersionScoresTab({
   scores,
   loading,
 }: VersionScoresTabProps) {
+  const { token } = useAuth();
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [showAllLevels, setShowAllLevels] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [exporting, setExporting] = useState(false);
 
   // Modal state
   const [modalOpened, setModalOpened] = useState(false);
@@ -217,6 +220,36 @@ export function VersionScoresTab({
     );
   }, [current, showAllLevels]);
 
+  const handleExport = async () => {
+    if (!token || !current) return;
+    setExporting(true);
+    try {
+      const res = await fetch(
+        `/api/score-export/version?version=${encodeURIComponent(
+          current.versionKey
+        )}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) {
+        throw new Error(`导出失败 (HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `version-${current.versionKey}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message || "导出失败");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Stack gap="md">
       <ScoreDetailModal
@@ -230,6 +263,9 @@ export function VersionScoresTab({
             按版本查看
           </Title>
         </Group>
+        <Button size="xs" onClick={handleExport} loading={exporting}>
+          导出图片
+        </Button>
       </Group>
 
       {buckets.length > 0 && (

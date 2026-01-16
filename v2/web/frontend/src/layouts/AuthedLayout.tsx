@@ -4,10 +4,8 @@ import {
   Burger,
   Divider,
   Group,
-  Image,
   NavLink,
   Stack,
-  Text,
   ThemeIcon,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -21,10 +19,8 @@ import {
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  HeaderProfileCard,
-  type MiniProfile,
-} from "../components/MiniProfileCard";
+import { type MiniProfile } from "../components/MiniProfileCard";
+import { AppHeader } from "../components/AppHeader";
 import { PageHeader } from "../components/PageHeader";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { useAuth } from "../providers/AuthProvider";
@@ -52,9 +48,9 @@ type PageMeta = {
 
 const pages: PageMeta[] = [
   {
-    label: "首页",
+    label: "网站首页",
     to: "/app",
-    title: "首页",
+    title: "网站首页",
     description: "开始使用 maimai Score Hub",
     icon: <IconHome size={18} />,
     color: "teal",
@@ -149,23 +145,7 @@ export default function AuthedLayout() {
       padding={0}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group gap="sm" wrap="nowrap">
-            <Image
-              src="/favicon.png"
-              alt="app icon"
-              width={42}
-              height={42}
-              radius="sm"
-            />
-            <Text fw={700} style={{ whiteSpace: "nowrap" }}>
-              maimai Score Hub
-            </Text>
-          </Group>
-          <Group>
-            <HeaderProfileCard profile={profile} onLogout={handleLogout} />
-          </Group>
-        </Group>
+        <AppHeader profile={profile} onLogout={handleLogout} />
       </AppShell.Header>
 
       <AppShell.Navbar
@@ -205,16 +185,8 @@ export default function AuthedLayout() {
                 />
               ))}
 
-              <div>
-                test
-              </div>
-
-
-
-            <Divider />
-
             <NavLink
-              label="设置"
+              label="网站设置"
               leftSection={
                 <ThemeIcon size={28} radius="md" color="gray">
                   <IconSettings size={18} />
@@ -241,7 +213,23 @@ export default function AuthedLayout() {
             zIndex: 2000,
           }}
         >
-          <Burger opened={opened} onClick={toggle} size="sm" />
+          <Box
+            w={48}
+            h={48}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor:
+                colorScheme === "dark"
+                  ? "var(--mantine-color-dark-6)"
+                  : "var(--mantine-color-gray-0)",
+              borderRadius: 999,
+              boxShadow: "var(--mantine-shadow-sm)",
+            }}
+          >
+            <Burger opened={opened} onClick={toggle} size="sm" />
+          </Box>
         </Box>
         {currentPage && (
           <Box
@@ -251,7 +239,7 @@ export default function AuthedLayout() {
               backgroundColor: headerBg,
             }}
           >
-            <div style={{ maxWidth: 912, margin: "0 auto" }}>
+            <div style={{ maxWidth: 838, margin: "0 auto" }}>
               <PageHeader
                 title={currentPage.title}
                 description={currentPage.description}
@@ -262,7 +250,7 @@ export default function AuthedLayout() {
         <Box p="md">
           <div
             style={{
-              maxWidth: 912,
+              maxWidth: 838,
               margin: "0 auto",
               width: "100%",
               overflowX: "hidden",

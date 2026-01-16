@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { MusicEntity, MusicSchema } from '../music/music.schema';
 
 import { CoverController } from './cover.controller';
 import { CoverService } from './cover.service';
-import { MusicEntity, MusicSchema } from '../music/music.schema';
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
@@ -13,5 +13,6 @@ import { MusicEntity, MusicSchema } from '../music/music.schema';
   ],
   controllers: [CoverController],
   providers: [CoverService],
+  exports: [CoverService],
 })
 export class CoverModule {}

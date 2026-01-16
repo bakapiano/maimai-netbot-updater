@@ -210,7 +210,7 @@ export function MusicScoreCard({
             </Group>
             <Group gap={2} align="center">
               <Text fw={700} size="sm" c="white">
-                RATING: {typeof rating === "number" ? Math.round(rating) : "-"}
+                Rating: {typeof rating === "number" ? Math.round(rating) : "-"}
               </Text>
             </Group>
           </Stack>

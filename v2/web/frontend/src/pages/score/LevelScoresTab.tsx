@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Box,
+  Button,
   Divider,
   Group,
   LoadingOverlay,
@@ -27,6 +28,7 @@ import {
 import { ScoreDetailModal } from "../../components/ScoreDetailModal";
 import type { SyncScore } from "../../types/syncScore";
 import classes from "./LevelScoresTab.module.css";
+import { useAuth } from "../../providers/AuthProvider";
 
 type ChartEntry = {
   music: MusicRow;
@@ -142,8 +144,10 @@ export function LevelScoresTab({
   scores,
   loading,
 }: LevelScoresTabProps) {
+  const { token } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [exporting, setExporting] = useState(false);
 
   // Modal state
   const [modalOpened, setModalOpened] = useState(false);
@@ -246,6 +250,34 @@ export function LevelScoresTab({
     }
   };
 
+  const handleExport = async () => {
+    if (!token || !current) return;
+    setExporting(true);
+    try {
+      const res = await fetch(
+        `/api/score-export/level?level=${encodeURIComponent(current.levelKey)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) {
+        throw new Error(`导出失败 (HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `level-${current.levelKey}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message || "导出失败");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Stack gap="md">
       <ScoreDetailModal
@@ -258,6 +290,9 @@ export function LevelScoresTab({
           <Title order={4} size="h5">
             按详细定数查看
           </Title>
+          <Button size="xs" onClick={handleExport} loading={exporting}>
+            导出图片
+          </Button>
         </Group>
 
         {buckets.length > 0 && (

@@ -27,7 +27,13 @@ export function HeaderProfileCard({ profile, onLogout }: HeaderProps) {
       <Menu.Target>
         <UnstyledButton>
           <Group gap="xs" wrap="nowrap">
-            <Text size="sm" fw={500} lineClamp={1} style={{ maxWidth: 120 }}>
+            <Text
+              size="sm"
+              fw={500}
+              lineClamp={1}
+              style={{ maxWidth: 120 }}
+              visibleFrom="sm"
+            >
               {profile.username ?? "未知用户"}
             </Text>
             <Avatar
@@ -37,9 +43,12 @@ export function HeaderProfileCard({ profile, onLogout }: HeaderProps) {
                   : null
               }
               alt={profile.username ?? "avatar"}
-              size={42}
+              size={36}
               radius="0"
-              imageProps={{ referrerPolicy: "no-referrer" }}
+              imageProps={{
+                referrerPolicy: "no-referrer",
+                style: { transformOrigin: "center" },
+              }}
             />
           </Group>
         </UnstyledButton>

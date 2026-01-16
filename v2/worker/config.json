@@ -9,7 +9,7 @@
             "port": 2222
         },
         "jobService": {
-            "baseUrl": "http://localhost:5173"
+            "baseUrl": "http://127.0.0.1:9050"
         }
     },
     "production": {

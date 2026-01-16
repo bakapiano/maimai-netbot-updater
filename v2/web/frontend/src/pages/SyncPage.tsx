@@ -278,30 +278,35 @@ export default function SyncPage() {
     // Save token first
     await saveTokens();
 
-    const res = await fetchJson<{ success?: boolean; message?: string }>(
-      "/api/sync/latest/diving-fish",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const res = await fetchJson<{
+      success?: boolean;
+      message?: string;
+      exported?: number;
+      response?: { creates?: number; updates?: number; message?: string };
+    }>("/api/sync/latest/diving-fish", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     setExportLoading(null);
 
     if (res.ok) {
+      const creates = res.data?.response?.creates ?? 0;
+      const updates = res.data?.response?.updates ?? 0;
       notifications.show({
         title: "导出成功",
-        message: "成绩已导出到 Diving-Fish",
+        message: `成绩已导出到 Diving-Fish（新增 ${creates} 条，更新 ${updates} 条）`,
         color: "green",
       });
     } else {
       const data = res.data as { message?: string } | null;
       notifications.show({
         title: "导出失败",
-        message: data?.message || `HTTP ${res.status}`,
+        message:
+          (data?.message || `HTTP ${res.status}`) + " 请检查 Token 是否正确！",
         color: "red",
       });
     }
@@ -316,30 +321,41 @@ export default function SyncPage() {
     // Save token first
     await saveTokens();
 
-    const res = await fetchJson<{ success?: boolean; message?: string }>(
-      "/api/sync/latest/lxns",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const res = await fetchJson<{
+      success?: boolean;
+      message?: string;
+      exported?: number;
+      response?: { success?: boolean; code?: number; data?: unknown[] };
+    }>("/api/sync/latest/lxns", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     setExportLoading(null);
 
     if (res.ok) {
+      const dataCount = Array.isArray(res.data?.response?.data)
+        ? res.data?.response?.data.length
+        : undefined;
+      const exported = res.data?.exported;
+      const count = dataCount ?? exported;
       notifications.show({
         title: "导出成功",
-        message: "成绩已导出到 落雪查分器",
+        message:
+          count !== undefined
+            ? `成绩已导出到 落雪查分器（${count} 条）`
+            : "成绩已导出到 落雪查分器",
         color: "green",
       });
     } else {
       const data = res.data as { message?: string } | null;
       notifications.show({
         title: "导出失败",
-        message: data?.message || `HTTP ${res.status}`,
+        message:
+          (data?.message || `HTTP ${res.status}`) + " 请检查 Token 是否正确！",
         color: "red",
       });
     }

@@ -1,4 +1,13 @@
-import { Badge, Card, Divider, Group, Stack, Text, Title } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Card,
+  Divider,
+  Group,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import {
   CompactMusicScoreCard,
   type DetailedMusicScoreCardProps,
@@ -9,6 +18,7 @@ import { ScoreDetailModal } from "../../components/ScoreDetailModal";
 import type { SyncScore } from "../../types/syncScore";
 import { useMemo, useState } from "react";
 import { useMusic } from "../../providers/MusicProvider";
+import { useAuth } from "../../providers/AuthProvider";
 
 type RatingSummary = {
   newTop: SyncScore[];
@@ -67,12 +77,14 @@ type Best50TabProps = {
 
 export function Best50Tab({ scores, loading }: Best50TabProps) {
   const { musicMap, chartMap } = useMusic();
+  const { token } = useAuth();
   const ratingSummary = useMemo(() => buildRatingSummary(scores), [scores]);
 
   // Modal state
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedScore, setSelectedScore] =
     useState<DetailedMusicScoreCardProps | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const handleScoreClick = (
     score: SyncScore,
@@ -112,6 +124,31 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
     setModalOpened(true);
   };
 
+  const handleExport = async () => {
+    if (!token) return;
+    setExporting(true);
+    try {
+      const res = await fetch("/api/score-export/best50", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        throw new Error(`导出失败 (HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "best50.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message || "导出失败");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Stack gap="md">
       <ScoreDetailModal
@@ -119,6 +156,14 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
         onClose={() => setModalOpened(false)}
         scoreData={selectedScore}
       />
+      <Group justify="space-between" align="center">
+        <Title size="h3" order={4}>
+          Best 50
+        </Title>
+        <Button size="xs" onClick={handleExport} loading={exporting}>
+          导出图片
+        </Button>
+      </Group>
       <Card withBorder shadow="none" padding="lg" radius="md">
         {ratingSummary ? (
           <Group justify="space-between" align="center" wrap="wrap">

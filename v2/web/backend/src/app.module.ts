@@ -9,6 +9,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MusicModule } from './modules/music/music.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ScoreExportModule } from './modules/score-export/score-export.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -44,6 +45,7 @@ import { UsersModule } from './modules/users/users.module';
     CoverModule,
     JobModule,
     MusicModule,
+    ScoreExportModule,
     SyncModule,
     UsersModule,
   ],

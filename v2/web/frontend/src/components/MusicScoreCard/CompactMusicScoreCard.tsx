@@ -22,8 +22,7 @@ export function CompactMusicScoreCard({
   songMetadata,
 }: MusicScoreCardProps) {
   const difficultyColor = LEVEL_COLORS[chartIndex] || "#888";
-  const difficultyName =
-    DIFFICULTY_NAMES[chartIndex]?.toUpperCase() || "UNKNOWN";
+  const difficultyName = DIFFICULTY_NAMES[chartIndex] || "UNKNOWN";
 
   const detailLevelText =
     typeof chartPayload?.detailLevel === "number"
@@ -49,7 +48,7 @@ export function CompactMusicScoreCard({
         style={{
           position: "relative",
           backgroundColor: difficultyColor,
-          padding: 8,
+          padding: 6,
         }}
       >
         <Box style={{ position: "relative" }}>
@@ -88,8 +87,8 @@ export function CompactMusicScoreCard({
               radius="sm"
               style={{
                 position: "absolute",
-                top: 8,
-                right: 8,
+                top: 6,
+                right: 6,
                 zIndex: 10,
                 pointerEvents: "none",
               }}
@@ -102,10 +101,11 @@ export function CompactMusicScoreCard({
             size="sm"
             variant="filled"
             radius="sm"
+            tt="none"
             style={{
               position: "absolute",
-              top: 8,
-              left: 8,
+              top: 6,
+              left: 6,
               zIndex: 10,
               backgroundColor: difficultyColor,
               color: "white",
@@ -118,10 +118,11 @@ export function CompactMusicScoreCard({
             size="sm"
             variant="filled"
             radius="sm"
+            tt="none"
             style={{
               position: "absolute",
-              bottom: 8,
-              left: 8,
+              bottom: 6,
+              left: 6,
               zIndex: 10,
               backgroundColor: "rgba(0,0,0,0.6)",
               color: "white",
@@ -133,8 +134,8 @@ export function CompactMusicScoreCard({
           <Box
             style={{
               position: "absolute",
-              bottom: 5,
-              right: 5,
+              bottom: 3,
+              right: 3,
               zIndex: 10,
               display: "flex",
               alignItems: "center",
@@ -151,12 +152,12 @@ export function CompactMusicScoreCard({
                 justifyContent: "center",
               }}
             >
-                {fc ? (
-                  <Image
-                    src={getIconUrl(fc)}
-                    w={24}
-                    referrerPolicy="no-referrer"
-                  />
+              {fc ? (
+                <Image
+                  src={getIconUrl(fc)}
+                  w={24}
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <Box
                   w={20}
@@ -178,13 +179,13 @@ export function CompactMusicScoreCard({
                 justifyContent: "center",
               }}
             >
-                {fs ? (
-                  <Image
-                    src={getIconUrl(fs)}
-                    w={24}
-                    h={24}
-                    referrerPolicy="no-referrer"
-                  />
+              {fs ? (
+                <Image
+                  src={getIconUrl(fs)}
+                  w={24}
+                  h={24}
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <Box
                   w={20}

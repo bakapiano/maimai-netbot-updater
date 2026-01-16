@@ -1,0 +1,206 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import type { Model } from 'mongoose';
+import { loadImage } from '@napi-rs/canvas';
+import { join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+
+import { CoverService } from '../cover/cover.service';
+import { MusicEntity } from '../music/music.schema';
+import type { ChartPayload, MusicDocument } from '../music/music.schema';
+import { SyncEntity } from '../sync/sync.schema';
+import type { SyncDocument, SyncScore } from '../sync/sync.schema';
+import { ensureFontsLoaded } from './score-export.fonts';
+import {
+  buildLevelBuckets,
+  buildRatingSummary,
+  buildVersionBuckets,
+} from './score-export.buckets';
+import type { CompactCard, MusicRow } from './score-export.types';
+import {
+  renderBest50Image,
+  renderLevelScoresImage,
+  renderVersionScoresImage,
+} from './score-export.render';
+
+@Injectable()
+export class ScoreExportService {
+  constructor(
+    @InjectModel(SyncEntity.name)
+    private readonly syncModel: Model<SyncDocument>,
+    @InjectModel(MusicEntity.name)
+    private readonly musicModel: Model<MusicDocument>,
+    private readonly covers: CoverService,
+  ) {}
+
+  async generateBest50Image(friendCode: string): Promise<Buffer> {
+    ensureFontsLoaded();
+    const { scores, musicMap, chartMap } = await this.loadData(friendCode);
+    const summary = buildRatingSummary(scores);
+    if (!summary) {
+      throw new NotFoundException('No rating data');
+    }
+
+    const newCards = summary.newTop.map((score) =>
+      this.buildCompactCard(score, musicMap, chartMap),
+    );
+    const oldCards = summary.oldTop.map((score) =>
+      this.buildCompactCard(score, musicMap, chartMap),
+    );
+
+    return renderBest50Image(
+      {
+        total: summary.totalSum,
+        newSum: summary.newSum,
+        oldSum: summary.oldSum,
+        newCards,
+        oldCards,
+      },
+      (musicId) => this.loadCoverImage(musicId),
+    );
+  }
+
+  async generateLevelScoresImage(
+    friendCode: string,
+    levelKey?: string,
+  ): Promise<Buffer> {
+    ensureFontsLoaded();
+    const { scores, musics } = await this.loadData(friendCode, true);
+    const filteredMusics = musics.filter((m) => m.type !== 'utage');
+    const filteredScores = scores.filter((s) => s.type !== 'utage');
+    const buckets = buildLevelBuckets(filteredMusics, filteredScores);
+    if (!buckets.length) {
+      throw new NotFoundException('No level data');
+    }
+
+    const current = buckets.find((b) => b.levelKey === levelKey) ?? buckets[0];
+
+    return renderLevelScoresImage(
+      current,
+      levelKey ?? current.levelKey,
+      (musicId) => this.loadCoverImage(musicId),
+    );
+  }
+
+  async generateVersionScoresImage(
+    friendCode: string,
+    versionKey?: string,
+  ): Promise<Buffer> {
+    ensureFontsLoaded();
+    const { scores, musics } = await this.loadData(friendCode, true);
+    const filteredMusics = musics.filter((m) => m.type !== 'utage');
+    const filteredScores = scores.filter((s) => s.type !== 'utage');
+    const buckets = buildVersionBuckets(filteredMusics, filteredScores);
+    if (!buckets.length) {
+      throw new NotFoundException('No version data');
+    }
+
+    const current =
+      buckets.find((b) => b.versionKey === versionKey) ?? buckets[0];
+
+    return renderVersionScoresImage(
+      current,
+      versionKey ?? current.versionKey,
+      (musicId) => this.loadCoverImage(musicId),
+    );
+  }
+
+  async generateImagesForFriendCode(
+    friendCode: string,
+    outputDir: string,
+  ): Promise<{ dir: string }> {
+    const dir = outputDir || join(process.cwd(), 'score-exports');
+    await mkdir(dir, { recursive: true });
+
+    const best50 = await this.generateBest50Image(friendCode);
+    const levelBuckets = await this.generateLevelScoresImage(friendCode);
+    const versionBuckets = await this.generateVersionScoresImage(friendCode);
+
+    await writeFile(join(dir, 'best50.png'), best50);
+    await writeFile(join(dir, 'level.png'), levelBuckets);
+    await writeFile(join(dir, 'version.png'), versionBuckets);
+
+    return { dir };
+  }
+
+  private async loadData(friendCode: string, includeMusics = true) {
+    const sync = await this.syncModel
+      .findOne({ friendCode })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!sync) {
+      throw new NotFoundException('No sync found');
+    }
+
+    const scores: SyncScore[] = Array.isArray(sync.scores) ? sync.scores : [];
+    if (!scores.length) {
+      throw new NotFoundException('No scores found');
+    }
+
+    const musics = includeMusics
+      ? ((await this.musicModel.find().lean()) as MusicRow[])
+      : ([] as MusicRow[]);
+
+    const musicMap = new Map<string, MusicRow>();
+    const chartMap = new Map<number, ChartPayload>();
+    for (const music of musics) {
+      musicMap.set(music.id, music);
+      const charts = music.charts ?? [];
+      for (const chart of charts) {
+        if (typeof chart.cid === 'number') {
+          chartMap.set(chart.cid, chart);
+        }
+      }
+    }
+
+    return { scores, musics, musicMap, chartMap };
+  }
+
+  private buildCompactCard(
+    score: SyncScore,
+    musicMap: Map<string, MusicRow>,
+    chartMap: Map<number, ChartPayload>,
+  ): CompactCard {
+    const music = musicMap.get(score.musicId);
+    const chart =
+      typeof score.cid === 'number' ? chartMap.get(score.cid) : null;
+    const detailLevelText =
+      typeof chart?.detailLevel === 'number'
+        ? chart.detailLevel.toFixed(1)
+        : (chart?.detailLevel ?? chart?.level ?? '?');
+
+    return {
+      musicId: score.musicId,
+      chartIndex: score.chartIndex,
+      type: score.type,
+      score: score.score ?? null,
+      rating: score.rating ?? null,
+      fc: score.fc ?? null,
+      fs: score.fs ?? null,
+      title: music?.title ?? 'Unknown Title',
+      detailLevelText,
+    };
+  }
+
+  private async loadCoverImage(
+    musicId: string,
+  ): Promise<Awaited<ReturnType<typeof loadImage>> | null> {
+    const local = await this.covers.getLocalPathIfExists(musicId);
+    if (local) {
+      return loadImage(local);
+    }
+
+    const padded = musicId.length < 5 ? musicId.padStart(5, '0') : musicId;
+    const url = `https://www.diving-fish.com/covers/${padded}.png`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return loadImage(buf);
+    } catch {
+      return null;
+    }
+  }
+}

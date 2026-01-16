@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ProfileCard, type UserProfile } from "../components/ProfileCard";
 import { ColorSchemeToggle } from "../components/ColorSchemeToggle";
+import { AppHeader } from "../components/AppHeader";
 import { PageHeader } from "../components/PageHeader";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../providers/AuthProvider";
@@ -243,10 +244,7 @@ export default function LoginPage() {
   return (
     <AppShell header={{ height: 56 }} padding={0}>
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Text fw={700}>maimai Score Hub</Text>
-          <ColorSchemeToggle />
-        </Group>
+        <AppHeader showProfile={false} />
       </AppShell.Header>
 
       <AppShell.Main>
