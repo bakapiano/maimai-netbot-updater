@@ -2,7 +2,9 @@ import {
   AppShell,
   Box,
   Burger,
+  Divider,
   Group,
+  Image,
   NavLink,
   Stack,
   Text,
@@ -17,7 +19,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   HeaderProfileCard,
@@ -93,6 +95,7 @@ export default function AuthedLayout() {
     useDisclosure(false);
   const { colorScheme } = useMantineColorScheme();
   const [profile, setProfile] = useState<MiniProfile | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const currentPage = pages.find((p) => p.to === location.pathname);
 
@@ -147,14 +150,17 @@ export default function AuthedLayout() {
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
-          <Group gap="sm">
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
+          <Group gap="sm" wrap="nowrap">
+            <Image
+              src="/favicon.png"
+              alt="app icon"
+              width={42}
+              height={42}
+              radius="sm"
             />
-            <Text fw={700}>maimai Score Hub</Text>
+            <Text fw={700} style={{ whiteSpace: "nowrap" }}>
+              maimai Score Hub
+            </Text>
           </Group>
           <Group>
             <HeaderProfileCard profile={profile} onLogout={handleLogout} />
@@ -162,10 +168,25 @@ export default function AuthedLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md" withBorder>
-        <Stack h="100%" gap={0}>
+      <AppShell.Navbar
+        p="md"
+        withBorder
+        onTouchStart={(event) => {
+          touchStartX.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          const startX = touchStartX.current;
+          touchStartX.current = null;
+          if (startX === null) return;
+          const endX = event.changedTouches[0]?.clientX ?? startX;
+          if (startX - endX > 50) {
+            close();
+          }
+        }}
+      >
+        <Stack h="100%">
           {/* Top: Navigation links */}
-          <Box style={{ flex: 1 }}>
+          <Group gap={4}>
             {pages
               .filter((page) => !page.hidden)
               .map((page) => (
@@ -183,10 +204,15 @@ export default function AuthedLayout() {
                   onClick={close}
                 />
               ))}
-          </Box>
 
-          {/* Bottom: Settings */}
-          <Box pt="md">
+              <div>
+                test
+              </div>
+
+
+
+            <Divider />
+
             <NavLink
               label="设置"
               leftSection={
@@ -194,15 +220,29 @@ export default function AuthedLayout() {
                   <IconSettings size={18} />
                 </ThemeIcon>
               }
-              onClick={openSettings}
+              onClick={() => {
+                close();
+                openSettings();
+              }}
             />
-          </Box>
+          </Group>
         </Stack>
       </AppShell.Navbar>
 
       <SettingsPanel opened={settingsOpened} onClose={closeSettings} />
 
       <AppShell.Main>
+        <Box
+          hiddenFrom="sm"
+          style={{
+            position: "fixed",
+            left: 16,
+            bottom: 16,
+            zIndex: 2000,
+          }}
+        >
+          <Burger opened={opened} onClick={toggle} size="sm" />
+        </Box>
         {currentPage && (
           <Box
             py={"lg"}
@@ -211,7 +251,7 @@ export default function AuthedLayout() {
               backgroundColor: headerBg,
             }}
           >
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={{ maxWidth: 912, margin: "0 auto" }}>
               <PageHeader
                 title={currentPage.title}
                 description={currentPage.description}
@@ -222,7 +262,7 @@ export default function AuthedLayout() {
         <Box p="md">
           <div
             style={{
-              maxWidth: 800,
+              maxWidth: 912,
               margin: "0 auto",
               width: "100%",
               overflowX: "hidden",

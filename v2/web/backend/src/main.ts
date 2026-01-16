@@ -17,6 +17,8 @@ async function bootstrap() {
 
   try {
     await app.listen(preferredPort, host);
+    const addr = app.getHttpServer().address() as AddressInfo;
+    console.log(`Listening on ${addr.address}:${addr.port}`);
   } catch (err: any) {
     if (err?.code === 'EACCES' || err?.code === 'EADDRINUSE') {
       // Retry with a fallback (or random free port) instead of crashing on bind errors
@@ -25,6 +27,7 @@ async function bootstrap() {
       console.warn(
         `Port ${preferredPort} unavailable (${err?.code}); using ${addr.address}:${addr.port}`,
       );
+      console.log(`Listening on ${addr.address}:${addr.port}`);
     } else {
       throw err;
     }

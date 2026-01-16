@@ -47,6 +47,7 @@ import {
 
 import type { SyncScore } from "../../types/syncScore";
 import {
+  getIconUrl,
   renderRank,
   type DetailedMusicScoreCardProps,
 } from "../../components/MusicScoreCard";
@@ -1071,9 +1072,10 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
                       <Table.Td style={{ padding: 4 }}>
                         {score.fc ? (
                           <Image
-                            src={`https://maimai.wahlap.com/maimai-mobile/img/music_icon_${score.fc}.png`}
+                            src={getIconUrl(score.fc)}
                             w={24}
                             h={24}
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <Box
@@ -1094,9 +1096,10 @@ export function AllScoresTab({ scores, loading, error }: AllScoresTabProps) {
                       <Table.Td style={{ padding: 4 }}>
                         {score.fs ? (
                           <Image
-                            src={`https://maimai.wahlap.com/maimai-mobile/img/music_icon_${score.fs}.png`}
+                            src={getIconUrl(score.fs)}
                             w={24}
                             h={24}
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <Box

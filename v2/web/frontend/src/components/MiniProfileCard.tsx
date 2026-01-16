@@ -1,6 +1,7 @@
 import { Avatar, Group, Menu, Text, UnstyledButton } from "@mantine/core";
 
 import { IconLogout } from "@tabler/icons-react";
+import { normalizeMaimaiImgUrl } from "../utils/maimaiImages";
 
 export type MiniProfile = {
   avatarUrl: string | null;
@@ -30,10 +31,15 @@ export function HeaderProfileCard({ profile, onLogout }: HeaderProps) {
               {profile.username ?? "未知用户"}
             </Text>
             <Avatar
-              src={profile.avatarUrl}
+              src={
+                profile.avatarUrl
+                  ? normalizeMaimaiImgUrl(profile.avatarUrl)
+                  : null
+              }
               alt={profile.username ?? "avatar"}
-              size={32}
+              size={42}
               radius="0"
+              imageProps={{ referrerPolicy: "no-referrer" }}
             />
           </Group>
         </UnstyledButton>

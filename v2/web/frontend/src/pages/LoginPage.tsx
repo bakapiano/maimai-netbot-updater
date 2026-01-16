@@ -257,18 +257,18 @@ export default function LoginPage() {
             backgroundColor: headerBg,
           }}
         >
-          <Container size="sm" style={{ maxWidth: 480, width: "100%" }}>
+          <Container size="sm" style={{ maxWidth: 600, width: "100%" }}>
             <PageHeader
               title={"欢迎！"}
               description={
-                "使用 maimai DX NET 好友代码登录以同步和查看成绩数据"
+                "输入 maimai DX Net 好友代码登录以同步和查看成绩数据"
               }
             />
           </Container>
         </Box>
 
         <Box p="md">
-          <Container size="sm" style={{ maxWidth: 480, width: "100%" }}>
+          <Container size="sm" style={{ maxWidth: 600, width: "100%" }}>
             <Stack gap="lg">
               {profile && <ProfileCard profile={profile} />}
 

@@ -1,11 +1,13 @@
 import {
   IconChartBar,
   IconList,
+  IconRefresh,
   IconTrophy,
   IconVersions,
 } from "@tabler/icons-react";
-import { Loader, Stack, Tabs, Text } from "@mantine/core";
+import { Anchor, Box, Group, Loader, Stack, Tabs, Text } from "@mantine/core";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { AllScoresTab } from "./score/AllScoresTab";
 import { Best50Tab } from "./score/Best50Tab";
@@ -29,6 +31,7 @@ export default function ScorePage() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasSync = Boolean(lastSyncAt) || scores.length > 0;
 
   const loadScores = async () => {
     if (!token) return;
@@ -45,6 +48,12 @@ export default function ScorePage() {
       }>("/api/sync/latest", { headers });
 
       if (!latestRes.ok) {
+        if (latestRes.status === 404) {
+          setError(null);
+          setScores([]);
+          setLastSyncAt(null);
+          return;
+        }
         setError(`获取成绩失败 (HTTP ${latestRes.status})`);
         setScores([]);
         setLastSyncAt(null);
@@ -85,48 +94,84 @@ export default function ScorePage() {
 
   return (
     <Stack gap="md">
-      <Tabs defaultValue="best">
-        <Tabs.List>
-          <Tabs.Tab value="best" leftSection={<IconTrophy size={16} />}>
-            B50
-          </Tabs.Tab>
-          <Tabs.Tab value="levels" leftSection={<IconChartBar size={16} />}>
-            按等级
-          </Tabs.Tab>
-          <Tabs.Tab value="versions" leftSection={<IconVersions size={16} />}>
-            按版本
-          </Tabs.Tab>
-          <Tabs.Tab value="all" leftSection={<IconList size={16} />}>
-            全部成绩
-          </Tabs.Tab>
-        </Tabs.List>
+      <Box style={{ position: "relative" }}>
+        <Box
+          style={{
+            pointerEvents: !hasSync && !error ? "none" : "auto",
+            filter: !hasSync && !error ? "blur(1px)" : "none",
+            opacity: !hasSync && !error ? 0.6 : 1,
+            transition: "filter 120ms ease, opacity 120ms ease",
+          }}
+        >
+          <Tabs defaultValue="best">
+            <Tabs.List style={{ flexWrap: "nowrap", overflowX: "auto" }}>
+              <Tabs.Tab value="best" leftSection={<IconTrophy size={16} />}>
+                B50
+              </Tabs.Tab>
+              <Tabs.Tab value="levels" leftSection={<IconChartBar size={16} />}>
+                按等级
+              </Tabs.Tab>
+              <Tabs.Tab value="versions" leftSection={<IconVersions size={16} />}>
+                按版本
+              </Tabs.Tab>
+              <Tabs.Tab value="all" leftSection={<IconList size={16} />}>
+                全部成绩
+              </Tabs.Tab>
+            </Tabs.List>
 
-        <Tabs.Panel value="best" pt="md">
-          <Best50Tab scores={scores} loading={loading} />
-        </Tabs.Panel>
+            <Tabs.Panel value="best" pt="md">
+              <Best50Tab scores={scores} loading={loading} />
+            </Tabs.Panel>
 
-        <Tabs.Panel value="levels" pt="md">
-          <LevelScoresTab
-            scores={scores}
-            musics={musics}
-            lastSyncAt={lastSyncAt}
-            loading={loading}
-          />
-        </Tabs.Panel>
+            <Tabs.Panel value="levels" pt="md">
+              <LevelScoresTab
+                scores={scores}
+                musics={musics}
+                lastSyncAt={lastSyncAt}
+                loading={loading}
+              />
+            </Tabs.Panel>
 
-        <Tabs.Panel value="versions" pt="md">
-          <VersionScoresTab
-            scores={scores}
-            musics={musics}
-            lastSyncAt={lastSyncAt}
-            loading={loading}
-          />
-        </Tabs.Panel>
+            <Tabs.Panel value="versions" pt="md">
+              <VersionScoresTab
+                scores={scores}
+                musics={musics}
+                lastSyncAt={lastSyncAt}
+                loading={loading}
+              />
+            </Tabs.Panel>
 
-        <Tabs.Panel value="all" pt="md">
-          <AllScoresTab scores={scores} loading={loading} error={error} />
-        </Tabs.Panel>
-      </Tabs>
+            <Tabs.Panel value="all" pt="md">
+              <AllScoresTab scores={scores} loading={loading} error={error} />
+            </Tabs.Panel>
+          </Tabs>
+        </Box>
+
+        {!hasSync && !error && (
+          <Box
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(2px)",
+              backgroundColor: "rgba(255, 255, 255, 0.35)",
+              borderRadius: 8,
+              zIndex: 1,
+            }}
+          >
+            <Stack align="center" gap="xs">
+              <Anchor component={Link} to="/app/sync">
+                <Group gap={6} align="center">
+                  <IconRefresh size={16} />
+                  <span>同步数据以查看成绩</span>
+                </Group>
+              </Anchor>
+            </Stack>
+          </Box>
+        )}
+      </Box>
     </Stack>
   );
 }

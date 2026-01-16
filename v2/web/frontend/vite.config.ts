@@ -6,7 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api": "http://localhost:9050",
+      "/api": "http://127.0.0.1:3000",
+      "/maimai-mobile/img": {
+        target: "https://maimai.wahlap.com",
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 });

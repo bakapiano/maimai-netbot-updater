@@ -239,7 +239,11 @@ export function MusicScoreCard({
                 p={0}
               >
                 {fc ? (
-                  <Image src={getIconUrl(fc)} w={32} />
+                  <Image
+                    src={getIconUrl(fc)}
+                    w={32}
+                    referrerPolicy="no-referrer"
+                  />
                 ) : (
                   <Box
                     w={24}
@@ -262,7 +266,11 @@ export function MusicScoreCard({
                 p={0}
               >
                 {fs ? (
-                  <Image src={getIconUrl(fs)} w={32} />
+                  <Image
+                    src={getIconUrl(fs)}
+                    w={32}
+                    referrerPolicy="no-referrer"
+                  />
                 ) : (
                   <Box
                     w={24}

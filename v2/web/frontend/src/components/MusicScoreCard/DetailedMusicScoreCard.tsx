@@ -310,7 +310,11 @@ export function DetailedMusicScoreCard({
               }}
             >
               {fc ? (
-                <Image src={getIconUrl(fc)} w={48} />
+                <Image
+                  src={getIconUrl(fc)}
+                  w={48}
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <Box
                   w={40}
@@ -336,7 +340,11 @@ export function DetailedMusicScoreCard({
               }}
             >
               {fs ? (
-                <Image src={getIconUrl(fs)} w={48} />
+                <Image
+                  src={getIconUrl(fs)}
+                  w={48}
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <Box
                   w={40}

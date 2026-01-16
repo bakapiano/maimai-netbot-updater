@@ -3,7 +3,12 @@
  * 负责处理单个同步任务的完整生命周期
  */
 
-import type { AggregatedScoreResult, Job, JobPatch } from "../types/index.ts";
+import type {
+  AggregatedScoreResult,
+  Job,
+  JobPatch,
+  SentFriendRequest,
+} from "../types/index.ts";
 import { DIFFICULTIES, TIMEOUTS } from "../constants.ts";
 import { dirname, join } from "node:path";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -144,19 +149,43 @@ export class JobHandler {
     if (isFriend) {
       console.log(`[JobHandler] Job ${this.job.id}: Friend accepted!`);
       await this.applyPatch({ stage: "update_score", updatedAt: new Date() });
-    } else {
-      const sentRequests = await this.friendManager.getSentRequests();
-      const match = sentRequests.find(
-        (s) => s.friendCode === this.job.friendCode
-      );
-      if (!match) {
-        throw new Error("好友请求已被取消或删除");
-      }
-
+    } else 
+      {
       const elapsed = Date.now() - this.job.createdAt.getTime();
       if (elapsed > TIMEOUTS.friendAcceptWait) {
         throw new Error("等待好友接受请求超时");
       }
+      
+      // Check if the friend request is still pending
+      let match: SentFriendRequest | undefined;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const sentRequests = await this.friendManager.getSentRequests();
+        match = sentRequests.find(
+          (s) => s.friendCode === this.job.friendCode
+        );
+
+        if (match) {
+          break;
+        }
+
+        if (attempt < 3) {
+          await this.sleep(10_000);
+        }
+      }
+
+      if (!match) {
+        const isFriendAfterRetry = await this.friendManager.isFriend(
+          this.job.friendCode
+        );
+        if (isFriendAfterRetry) {
+          console.log(`[JobHandler] Job ${this.job.id}: Friend accepted!`);
+          await this.applyPatch({ stage: "update_score", updatedAt: new Date() });
+          return;
+        }
+        throw new Error("好友请求已被取消或删除");
+      }
+
       await this.applyPatch({ updatedAt: new Date() });
     }
   }
@@ -353,5 +382,9 @@ export class JobHandler {
       clearInterval(this.heartbeat);
       this.heartbeat = null;
     }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

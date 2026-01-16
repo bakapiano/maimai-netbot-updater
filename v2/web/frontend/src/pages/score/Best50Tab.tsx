@@ -186,7 +186,7 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
               现版本 Best 15
             </Title>
             <Group
-              gap="md"
+              gap="sm"
               align="stretch"
               wrap="wrap"
               style={{ width: "100%" }}
@@ -233,7 +233,7 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
               旧版本 Best 35
             </Title>
             <Group
-              gap="md"
+              gap="sm"
               align="stretch"
               wrap="wrap"
               style={{ width: "100%" }}

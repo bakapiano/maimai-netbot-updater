@@ -151,8 +151,12 @@ export function CompactMusicScoreCard({
                 justifyContent: "center",
               }}
             >
-              {fc ? (
-                <Image src={getIconUrl(fc)} w={24} />
+                {fc ? (
+                  <Image
+                    src={getIconUrl(fc)}
+                    w={24}
+                    referrerPolicy="no-referrer"
+                  />
               ) : (
                 <Box
                   w={20}
@@ -174,8 +178,13 @@ export function CompactMusicScoreCard({
                 justifyContent: "center",
               }}
             >
-              {fs ? (
-                <Image src={getIconUrl(fs)} w={24} h={24} />
+                {fs ? (
+                  <Image
+                    src={getIconUrl(fs)}
+                    w={24}
+                    h={24}
+                    referrerPolicy="no-referrer"
+                  />
               ) : (
                 <Box
                   w={20}

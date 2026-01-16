@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { normalizeMaimaiImgUrl } from "../utils/maimaiImages";
 
 export type UserProfile = {
   avatarUrl: string | null;
@@ -32,10 +33,11 @@ export function ProfileCard({ profile }: Props) {
         {profile.avatarUrl && (
           <Box p={4} style={{ flexShrink: 0 }}>
             <Image
-              src={profile.avatarUrl}
+              src={normalizeMaimaiImgUrl(profile.avatarUrl)}
               alt={profile.username ?? "avatar"}
               width={128}
               height={128}
+              referrerPolicy="no-referrer"
             />
           </Box>
         )}
@@ -127,18 +129,20 @@ export function ProfileCard({ profile }: Props) {
           >
             {profile.courseRankUrl && (
               <Image
-                src={profile.courseRankUrl}
+                src={normalizeMaimaiImgUrl(profile.courseRankUrl)}
                 alt="course rank"
                 style={{ height: "100%", width: "auto" }}
                 fit="contain"
+                referrerPolicy="no-referrer"
               />
             )}
             {profile.classRankUrl && (
               <Image
-                src={profile.classRankUrl}
+                src={normalizeMaimaiImgUrl(profile.classRankUrl)}
                 alt="class rank"
                 style={{ height: "100%", width: "auto" }}
                 fit="contain"
+                referrerPolicy="no-referrer"
               />
             )}
             {profile.awakeningCount !== null && (
@@ -151,11 +155,12 @@ export function ProfileCard({ profile }: Props) {
                 }}
               >
                 <Image
-                  src="https://maimai.wahlap.com/maimai-mobile/img/icon_star.png"
+                  src="/maimai-mobile/img/icon_star.png"
                   alt="star"
                   width={22}
                   height={22}
                   fit="contain"
+                  referrerPolicy="no-referrer"
                 />
                 <Text size="sm" fw={700}>
                   ×{profile.awakeningCount}

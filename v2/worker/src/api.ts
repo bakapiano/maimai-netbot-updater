@@ -38,6 +38,7 @@ app.get("/", (_req, res) => {
 app.get("/api/auth", async (_req, res) => {
   try {
     const href = await getAuthUrl(GameType.maimai);
+    console.log(href)
     res.json({ authUrl: href });
   } catch (err) {
     console.error(err);

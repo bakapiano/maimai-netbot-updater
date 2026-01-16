@@ -1,12 +1,14 @@
 import {
-  Drawer,
-  Group,
-  SegmentedControl,
-  Stack,
-  Text,
-  useMantineColorScheme,
+    Box,
+    Drawer,
+    Group,
+    SegmentedControl,
+    Stack,
+    Text,
+    useMantineColorScheme,
 } from "@mantine/core";
 import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
+import { useRef } from "react";
 
 type Props = {
   opened: boolean;
@@ -15,6 +17,7 @@ type Props = {
 
 export function SettingsPanel({ opened, onClose }: Props) {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const touchStartX = useRef<number | null>(null);
 
   return (
     <Drawer
@@ -23,8 +26,23 @@ export function SettingsPanel({ opened, onClose }: Props) {
       title="设置"
       position="right"
       size="sm"
+      onTouchStart={(event) => {
+        touchStartX.current = event.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        const startX = touchStartX.current;
+        touchStartX.current = null;
+        if (startX === null) return;
+        const endX = event.changedTouches[0]?.clientX ?? startX;
+        if (endX - startX > 50) {
+          onClose();
+        }
+      }}
     >
-      <Stack gap="lg">
+      <Box
+        style={{ height: "100%" }}
+      >
+        <Stack gap="lg">
         <div>
           <Text size="sm" fw={500} mb="xs">
             外观
@@ -66,7 +84,8 @@ export function SettingsPanel({ opened, onClose }: Props) {
             ]}
           />
         </div>
-      </Stack>
+        </Stack>
+      </Box>
     </Drawer>
   );
 }

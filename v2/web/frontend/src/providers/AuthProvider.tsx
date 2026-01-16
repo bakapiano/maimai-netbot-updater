@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -48,6 +49,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearToken = useCallback(() => setToken(null), [setToken]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/users/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (cancelled) return;
+
+        if (res.status === 401 || res.status === 403) {
+          setToken(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Token validation failed", err);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, setToken]);
 
   const value = useMemo(
     () => ({ token, setToken, clearToken }),

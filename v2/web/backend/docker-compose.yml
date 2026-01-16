@@ -10,11 +10,9 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "8848:9050"
     depends_on:
       - mongo
     environment:
@@ -30,6 +28,17 @@ services:
       AUTH_JWT_SECRET: change-me-in-production
     volumes:
       - ./covers:/app/covers
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./covers:/covers:ro
 
 volumes:
   mongo_data:

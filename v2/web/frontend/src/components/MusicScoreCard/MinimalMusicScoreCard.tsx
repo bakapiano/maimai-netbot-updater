@@ -83,7 +83,11 @@ export function MinimalMusicScoreCard({
                 }}
               >
                 {fc ? (
-                  <Image src={getIconUrl(fc)} w={24} />
+                   <Image
+                     src={getIconUrl(fc)}
+                     w={24}
+                     referrerPolicy="no-referrer"
+                   />
                 ) : (
                   <Box
                     w={20}
@@ -106,7 +110,11 @@ export function MinimalMusicScoreCard({
                 }}
               >
                 {fs ? (
-                  <Image src={getIconUrl(fs)} w={24} />
+                   <Image
+                     src={getIconUrl(fs)}
+                     w={24}
+                     referrerPolicy="no-referrer"
+                   />
                 ) : (
                   <Box
                     w={20}
