@@ -71,12 +71,15 @@ db.json
 .db.json.tmp
 
 # downloaded covers
-v2/web/backend/covers/
+backend/covers/
 
 # backend dist
-v2/web/backend/dist
+backend/dist
 
 
 debug-html/
 friend-vs/
 log/
+
+*.zip
+backend/score-exports/
