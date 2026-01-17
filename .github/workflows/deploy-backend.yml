@@ -19,4 +19,4 @@ jobs:
             git fetch --all
             git checkout main
             git pull
-            docker compose -f v2/web/backend/docker-compose.yml up -d --build
+            docker compose -f /backend/docker-compose.yml up -d --build
