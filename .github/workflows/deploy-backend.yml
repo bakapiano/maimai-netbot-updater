@@ -16,7 +16,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd ${{ secrets.BACKEND_PATH }}
+            git config --global --add safe.directory "$(pwd)"
             git fetch --all
             git checkout main
             git pull
-            docker compose -f /backend/docker-compose.yml up -d --build
+            (docker compose -f /backend/docker-compose.yml up -d --build) || (docker-compose -f /backend/docker-compose.yml up -d --build)
