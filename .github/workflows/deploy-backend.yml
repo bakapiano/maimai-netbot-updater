@@ -1,0 +1,22 @@
+name: deploy backend
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ${{ secrets.PATH }}
+            git fetch --all
+            git checkout dev
+            git pull
+            docker compose -f v2/web/backend/docker-compose.yml up -d --build
