@@ -63,9 +63,6 @@ typings/
 # macOS-specific
 .DS_Store
 
-# package-lock
-package-lock.json
-
 # lowdb
 db.json
 .db.json.tmp
