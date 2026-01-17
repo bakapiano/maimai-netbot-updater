@@ -2,7 +2,6 @@ import {
   AppShell,
   Box,
   Burger,
-  Divider,
   Group,
   NavLink,
   Stack,
@@ -111,7 +110,7 @@ export default function AuthedLayout() {
         "/api/users/profile",
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (cancelled) return;

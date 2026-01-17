@@ -18,7 +18,6 @@ import { IconInfoCircle } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProfileCard, type UserProfile } from "../components/ProfileCard";
-import { ColorSchemeToggle } from "../components/ColorSchemeToggle";
 import { AppHeader } from "../components/AppHeader";
 import { PageHeader } from "../components/PageHeader";
 import { notifications } from "@mantine/notifications";
@@ -81,12 +80,12 @@ export default function LoginPage() {
   const totalWaitSeconds = 3 * 60;
   const remainingPercent = Math.min(
     100,
-    Math.max(0, (timeLeft / totalWaitSeconds) * 100)
+    Math.max(0, (timeLeft / totalWaitSeconds) * 100),
   );
 
   const canLogin = useMemo(
     () => /^\d{15}$/.test(friendCode.trim()) && !loading,
-    [friendCode, loading]
+    [friendCode, loading],
   );
 
   useEffect(() => {
@@ -107,7 +106,7 @@ export default function LoginPage() {
 
     const handle = setInterval(async () => {
       const res = await fetchJson<LoginStatus>(
-        `/api/auth/login-status?jobId=${jobId}`
+        `/api/auth/login-status?jobId=${jobId}`,
       );
 
       if (!res.ok) {

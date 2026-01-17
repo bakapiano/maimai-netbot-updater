@@ -1,3 +1,4 @@
+import { Box, LoadingOverlay } from "@mantine/core";
 import type { MusicChartPayload, MusicRow } from "../types/music";
 import {
   createContext,
@@ -8,7 +9,6 @@ import {
   useState,
 } from "react";
 
-import { Box, LoadingOverlay } from "@mantine/core";
 import { fetchJson } from "../utils/fetch";
 
 type MusicContextValue = {
@@ -89,7 +89,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       error,
       reload: loadMusics,
     }),
-    [musics, musicMap, chartMap, loading, error, loadMusics]
+    [musics, musicMap, chartMap, loading, error, loadMusics],
   );
 
   return (
