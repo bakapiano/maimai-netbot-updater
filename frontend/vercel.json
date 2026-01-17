@@ -2,10 +2,6 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "rewrites": [
         {
-            "source": "/api/:path*",
-            "destination": "http://:8080/api/:path*"
-        },
-        {
             "source": "/maimai-mobile/img/:path*",
             "destination": "https://maimai.wahlap.com/maimai-mobile/img/:path*"
         },
