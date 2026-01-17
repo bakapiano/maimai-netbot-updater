@@ -12,4 +12,4 @@ ENV NODE_ENV=production
 
 EXPOSE 3999 2222
 
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start:dev"]
