@@ -10,6 +10,6 @@ COPY worker/ ./
 
 ENV NODE_ENV=production
 
-EXPOSE 3999 2560
+EXPOSE 3999 2222
 
 CMD ["npm", "run", "start"]

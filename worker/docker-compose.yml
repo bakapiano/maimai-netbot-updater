@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     ports:
       - "3999:3999"
-      - "2560:2560"
+      - "2222:2222"
     volumes:
       - ./config.json:/app/worker/config.json:ro
       - ./debug-html:/app/worker/debug-html
