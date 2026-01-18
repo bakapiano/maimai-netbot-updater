@@ -28,6 +28,9 @@ export class SyncEntity {
 
   @Prop({ type: [Object], default: [] })
   scores!: SyncScore[];
+
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export type SyncDocument = HydratedDocument<SyncEntity>;

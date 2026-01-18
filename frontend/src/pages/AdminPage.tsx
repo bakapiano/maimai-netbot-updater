@@ -460,7 +460,13 @@ export default function AdminPage() {
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm" c="dimmed">
-                            {new Date(user.createdAt).toLocaleDateString()}
+                            {new Date(user.createdAt).toLocaleString("zh-CN", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </Text>
                         </Table.Td>
                       </Table.Tr>

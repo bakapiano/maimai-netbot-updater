@@ -14,6 +14,7 @@ import { SyncEntity } from './sync.schema';
 import type { SyncDocument, SyncScore } from './sync.schema';
 import { getRating, normalizeAchievement } from '../../common/rating';
 import { convertSyncScoresToDivingFishRecords } from '../../common/prober/diving-fish/converter';
+import { uploadRecords as uploadDivingFishRecords } from '../../common/prober/diving-fish/api';
 import { convertSyncScoresToLxnsPayload } from '../../common/prober/lxns/converter';
 import { uploadLxnsScores } from '../../common/prober/lxns/client';
 
@@ -29,9 +30,6 @@ type MusicRow = MusicEntity & {
 };
 
 type ScoreSnapshot = SyncScore;
-
-const DIVING_FISH_ENDPOINT =
-  'https://www.diving-fish.com/api/maimaidxprober/player/update_records';
 
 @Injectable()
 export class SyncService {
@@ -83,8 +81,8 @@ export class SyncService {
     const scores = Array.isArray(sync.scores) ? sync.scores : [];
     return {
       id: sync.id,
-      // createdAt: sync.createdAt,
-      // updatedAt: sync.updatedAt,
+      createdAt: sync.createdAt,
+      updatedAt: sync.updatedAt,
       scores,
     };
   }
@@ -221,35 +219,17 @@ export class SyncService {
 
     const records = convertSyncScoresToDivingFishRecords(scores, titleMap);
 
-    const res = await fetch(DIVING_FISH_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Import-Token': importToken,
-      },
-      body: JSON.stringify(records),
-    });
-
-    const text = await res.text();
-    let data: unknown = null;
     try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = text;
+      const res = await uploadDivingFishRecords(records, importToken);
+      return {
+        status: res.status,
+        exported: records.length,
+        response: res.data,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      throw new BadRequestException(message);
     }
-
-    if (!res.ok) {
-      const detail = typeof data === 'string' ? data : JSON.stringify(data);
-      throw new BadRequestException(
-        `Diving-fish responded ${res.status}${detail ? `: ${detail}` : ''}`,
-      );
-    }
-
-    return {
-      status: res.status,
-      exported: records.length,
-      response: data,
-    };
   }
 
   async exportToLxns(friendCode: string, importToken: string) {

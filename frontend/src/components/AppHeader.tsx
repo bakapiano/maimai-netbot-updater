@@ -1,4 +1,4 @@
-import { Box, Group, Image, Text } from "@mantine/core";
+import { Badge, Box, Group, Image, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 
 import { HeaderProfileCard, type MiniProfile } from "./MiniProfileCard";
@@ -44,6 +44,9 @@ export function AppHeader({
         <Text fw={700} lineClamp={1} style={{ minWidth: 0 }}>
           maimai Score Hub
         </Text>
+        <Badge size="md" variant="default">
+          测试版
+        </Badge>
       </Group>
       <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
         {rightSection ??

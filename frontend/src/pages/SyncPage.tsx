@@ -1,5 +1,6 @@
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
   Card,
@@ -9,7 +10,9 @@ import {
   PasswordInput,
   Progress,
   Stack,
+  Tabs,
   Text,
+  TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState } from "react";
@@ -84,6 +87,15 @@ export default function SyncPage() {
   // Token settings
   const [divingFishToken, setDivingFishToken] = useState("");
   const [lxnsToken, setLxnsToken] = useState("");
+
+  // Diving-Fish login mode: "token" or "login"
+  const [divingFishMode, setDivingFishMode] = useState<"token" | "login">(
+    "token",
+  );
+  // Diving-Fish login credentials (not saved, only used to fetch token)
+  const [divingFishUsername, setDivingFishUsername] = useState("");
+  const [divingFishPassword, setDivingFishPassword] = useState("");
+  const [fetchingDivingFishToken, setFetchingDivingFishToken] = useState(false);
 
   // Sync job state
   const [syncJobId, setSyncJobId] = useState<string | null>(null);
@@ -254,7 +266,7 @@ export default function SyncPage() {
           friendCode: profile.friendCode,
           skipUpdateScore: false, // We want to sync scores
         }),
-      }
+      },
     );
 
     if (res.ok && res.data?.jobId) {
@@ -378,6 +390,14 @@ export default function SyncPage() {
 
       {profileError && <Alert color="red">{profileError}</Alert>}
 
+      {loading && !profile?.profile && (
+        <Card withBorder padding="md" radius="md" h={160}>
+          <Group justify="center" py="md" h={160}>
+            <Loader size="sm" />
+          </Group>
+        </Card>
+      )}
+
       {profile?.profile && <ProfileCard profile={profile.profile} />}
 
       {/* Sync Section */}
@@ -465,11 +485,11 @@ export default function SyncPage() {
                 syncStatus.status === "completed"
                   ? "4px solid var(--mantine-color-green-6)"
                   : syncStatus.status === "failed" ||
-                    syncStatus.status === "canceled"
-                  ? "4px solid var(--mantine-color-red-6)"
-                  : syncStatus.status === "processing"
-                  ? "4px solid var(--mantine-color-blue-6)"
-                  : "4px solid var(--mantine-color-gray-4)",
+                      syncStatus.status === "canceled"
+                    ? "4px solid var(--mantine-color-red-6)"
+                    : syncStatus.status === "processing"
+                      ? "4px solid var(--mantine-color-blue-6)"
+                      : "4px solid var(--mantine-color-gray-4)",
             }}
           >
             <Stack gap="sm">
@@ -487,22 +507,22 @@ export default function SyncPage() {
                     syncStatus.status === "completed"
                       ? "green"
                       : syncStatus.status === "failed" ||
-                        syncStatus.status === "canceled"
-                      ? "red"
-                      : syncStatus.status === "queued"
-                      ? "gray"
-                      : "blue"
+                          syncStatus.status === "canceled"
+                        ? "red"
+                        : syncStatus.status === "queued"
+                          ? "gray"
+                          : "blue"
                   }
                 >
                   {syncStatus.status === "completed"
                     ? "✓ 已完成"
                     : syncStatus.status === "failed"
-                    ? "✗ 失败"
-                    : syncStatus.status === "canceled"
-                    ? "已取消"
-                    : syncStatus.status === "queued"
-                    ? "排队中"
-                    : "● 进行中"}
+                      ? "✗ 失败"
+                      : syncStatus.status === "canceled"
+                        ? "已取消"
+                        : syncStatus.status === "queued"
+                          ? "排队中"
+                          : "● 进行中"}
                 </Badge>
               </Group>
 
@@ -550,14 +570,14 @@ export default function SyncPage() {
                             diff === 0
                               ? "green"
                               : diff === 1
-                              ? "yellow"
-                              : diff === 2
-                              ? "red"
-                              : diff === 3
-                              ? "grape"
-                              : diff === 4
-                              ? "violet"
-                              : "pink"
+                                ? "yellow"
+                                : diff === 2
+                                  ? "red"
+                                  : diff === 3
+                                    ? "grape"
+                                    : diff === 4
+                                      ? "violet"
+                                      : "pink"
                           }
                         >
                           {DIFFICULTY_NAMES[diff] ?? `Diff ${diff}`}
@@ -596,46 +616,247 @@ export default function SyncPage() {
         </Text>
 
         <Text size="sm" c="dimmed">
-          配置 Token 后可将同步的成绩更新到其他查分器。
+          将同步的成绩导出到查分器，方便你在更多平台查看和分析成绩。
         </Text>
 
-        <Group align="flex-end" gap="xs">
-          <PasswordInput
-            label="Diving-Fish Token"
-            placeholder="输入 import token"
-            value={divingFishToken}
-            onChange={(e) => setDivingFishToken(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <Button
-            onClick={exportToDivingFish}
-            loading={exportLoading === "diving-fish"}
-            disabled={!divingFishToken || exportLoading !== null}
-            variant="light"
-            size="sm"
-          >
-            {exportLoading === "diving-fish" ? <Loader size="xs" /> : "更新"}
-          </Button>
-        </Group>
+        {/* Diving-Fish Section */}
+        <Card withBorder padding="md" radius="md">
+          <Stack gap="md">
+            <Anchor
+              href="https://www.diving-fish.com/maimaidx/prober/"
+              target="_blank"
+              fw={500}
+              size="sm"
+            >
+              水鱼查分器
+            </Anchor>
 
-        <Group align="flex-end" gap="xs">
-          <PasswordInput
-            label={<>落雪 Token</>}
-            placeholder="输入 personal token"
-            value={lxnsToken}
-            onChange={(e) => setLxnsToken(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <Button
-            onClick={exportToLxns}
-            loading={exportLoading === "lxns"}
-            disabled={!lxnsToken || exportLoading !== null}
-            variant="light"
-            size="sm"
-          >
-            {exportLoading === "lxns" ? <Loader size="xs" /> : "更新"}
-          </Button>
-        </Group>
+            <Tabs
+              value={divingFishMode}
+              onChange={(v) =>
+                setDivingFishMode((v as "token" | "login") ?? "token")
+              }
+            >
+              <Tabs.List>
+                <Tabs.Tab value="token">Token</Tabs.Tab>
+                <Tabs.Tab value="login">账号密码</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="token" pt="md">
+                <Group align="flex-end" gap="xs">
+                  <PasswordInput
+                    label="Import Token"
+                    placeholder="输入 import token"
+                    value={divingFishToken}
+                    onChange={(e) => setDivingFishToken(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    onClick={exportToDivingFish}
+                    loading={exportLoading === "diving-fish"}
+                    disabled={!divingFishToken || exportLoading !== null}
+                    variant="light"
+                    size="sm"
+                  >
+                    {exportLoading === "diving-fish" ? (
+                      <Loader size="xs" />
+                    ) : (
+                      "更新"
+                    )}
+                  </Button>
+                </Group>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="login" pt="md">
+                <Stack gap="sm">
+                  <Text size="xs" c="red">
+                    账号密码仅用于获取成绩导入 token，不会保存在服务器或浏览器中
+                  </Text>
+                  <TextInput
+                    label="用户名"
+                    placeholder="水鱼账号用户名"
+                    value={divingFishUsername}
+                    onChange={(e) => setDivingFishUsername(e.target.value)}
+                  />
+                  <PasswordInput
+                    label="密码"
+                    placeholder="水鱼账号密码"
+                    value={divingFishPassword}
+                    onChange={(e) => setDivingFishPassword(e.target.value)}
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!divingFishUsername || !divingFishPassword) {
+                        notifications.show({
+                          title: "错误",
+                          message: "请填写用户名和密码",
+                          color: "red",
+                        });
+                        return;
+                      }
+
+                      setFetchingDivingFishToken(true);
+                      try {
+                        // Step 1: Get token
+                        const res = await fetchJson<{
+                          importToken?: string;
+                          nickname?: string;
+                          message?: string;
+                        }>("/api/users/diving-fish/token", {
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            username: divingFishUsername,
+                            password: divingFishPassword,
+                          }),
+                        });
+
+                        if (res.ok && res.data?.importToken) {
+                          const fetchedToken = res.data.importToken;
+                          setDivingFishToken(fetchedToken);
+                          // Clear credentials after successful fetch
+                          setDivingFishUsername("");
+                          setDivingFishPassword("");
+
+                          // Step 2: Save token and export
+                          const saveRes = await fetchJson<unknown>(
+                            "/api/users/profile",
+                            {
+                              method: "PATCH",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                divingFishImportToken: fetchedToken,
+                                lxnsImportToken: lxnsToken || null,
+                              }),
+                            },
+                          );
+
+                          if (saveRes.ok) {
+                            // Step 3: Export to diving-fish
+                            const exportRes = await fetchJson<{
+                              success?: boolean;
+                              message?: string;
+                              exported?: number;
+                              response?: {
+                                creates?: number;
+                                updates?: number;
+                                message?: string;
+                              };
+                            }>("/api/sync/latest/diving-fish", {
+                              method: "POST",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                            });
+
+                            if (exportRes.ok) {
+                              const creates =
+                                exportRes.data?.response?.creates ?? 0;
+                              const updates =
+                                exportRes.data?.response?.updates ?? 0;
+                              notifications.show({
+                                title: "更新成功",
+                                message: `成绩已导出到 Diving-Fish（新增 ${creates} 条，更新 ${updates} 条）`,
+                                color: "green",
+                              });
+                              // Switch to token mode
+                              setDivingFishMode("token");
+                            } else {
+                              const data = exportRes.data as {
+                                message?: string;
+                              } | null;
+                              notifications.show({
+                                title: "导出失败",
+                                message:
+                                  (data?.message ||
+                                    `HTTP ${exportRes.status}`) +
+                                  " 请检查 Token 是否正确！",
+                                color: "red",
+                              });
+                            }
+                          } else {
+                            notifications.show({
+                              title: "获取成功，但保存失败",
+                              message: res.data.nickname
+                                ? `已获取 ${res.data.nickname} 的 Import Token，但保存失败`
+                                : "已成功获取 Import Token，但保存失败",
+                              color: "yellow",
+                            });
+                          }
+                        } else {
+                          const errorMsg =
+                            res.data?.message || `HTTP ${res.status}`;
+                          notifications.show({
+                            title: "获取失败",
+                            message: errorMsg,
+                            color: "red",
+                          });
+                        }
+                      } catch {
+                        notifications.show({
+                          title: "操作失败",
+                          message: "网络错误，请稍后重试",
+                          color: "red",
+                        });
+                      } finally {
+                        setFetchingDivingFishToken(false);
+                      }
+                    }}
+                    loading={fetchingDivingFishToken}
+                    disabled={
+                      !divingFishUsername ||
+                      !divingFishPassword ||
+                      fetchingDivingFishToken
+                    }
+                    variant="filled"
+                    size="sm"
+                  >
+                    获取 Token 并更新
+                  </Button>
+                </Stack>
+              </Tabs.Panel>
+            </Tabs>
+          </Stack>
+        </Card>
+
+        {/* LXNS Section */}
+        <Card withBorder padding="md" radius="md">
+          <Stack gap="md">
+            <Anchor
+              href="https://maimai.lxns.net/"
+              target="_blank"
+              fw={500}
+              size="sm"
+            >
+              落雪查分器
+            </Anchor>
+            <Group align="flex-end" gap="xs">
+              <PasswordInput
+                label="Personal Token"
+                placeholder="输入 personal token"
+                value={lxnsToken}
+                onChange={(e) => setLxnsToken(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                onClick={exportToLxns}
+                loading={exportLoading === "lxns"}
+                disabled={!lxnsToken || exportLoading !== null}
+                variant="light"
+                size="sm"
+              >
+                {exportLoading === "lxns" ? <Loader size="xs" /> : "更新"}
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
       </Stack>
     </Stack>
   );

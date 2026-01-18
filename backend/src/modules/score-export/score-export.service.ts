@@ -87,6 +87,7 @@ export class ScoreExportService {
   async generateVersionScoresImage(
     friendCode: string,
     versionKey?: string,
+    minLevel?: number,
   ): Promise<Buffer> {
     ensureFontsLoaded();
     const { scores, musics } = await this.loadData(friendCode, true);
@@ -97,8 +98,29 @@ export class ScoreExportService {
       throw new NotFoundException('No version data');
     }
 
-    const current =
+    let current =
       buckets.find((b) => b.versionKey === versionKey) ?? buckets[0];
+
+    // Filter by minLevel if specified
+    if (minLevel !== undefined && !isNaN(minLevel)) {
+      current = {
+        ...current,
+        levels: current.levels
+          .map((level) => ({
+            ...level,
+            items: level.items.filter((item) => {
+              const detailLevel = item.chart?.detailLevel;
+              if (typeof detailLevel === 'number') {
+                return detailLevel >= minLevel;
+              }
+              // Fallback to parsing level string
+              const levelNum = level.levelNumeric;
+              return levelNum !== null && levelNum >= minLevel;
+            }),
+          }))
+          .filter((level) => level.items.length > 0),
+      };
+    }
 
     return renderVersionScoresImage(
       current,

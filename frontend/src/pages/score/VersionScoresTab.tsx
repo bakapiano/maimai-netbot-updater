@@ -6,6 +6,7 @@ import {
   LoadingOverlay,
   Select,
   Stack,
+  Switch,
   Text,
   Title,
 } from "@mantine/core";
@@ -158,10 +159,13 @@ export function VersionScoresTab({
   const [isPending, startTransition] = useTransition();
   const [exporting, setExporting] = useState(false);
 
-  // Modal state
+  // Modal state for score detail
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedScore, setSelectedScore] =
     useState<DetailedMusicScoreCardProps | null>(null);
+
+  // Export all levels toggle
+  const [exportAllLevels, setExportAllLevels] = useState(false);
 
   const handleScoreClick = (entry: ChartEntry) => {
     setSelectedScore({
@@ -224,14 +228,18 @@ export function VersionScoresTab({
     );
   }, [current, showAllLevels]);
 
-  const handleExport = async () => {
+  const handleExport = async (minLevel?: number) => {
     if (!token || !current) return;
     setExporting(true);
     try {
+      const params = new URLSearchParams({
+        version: current.versionKey,
+      });
+      if (minLevel !== undefined) {
+        params.set("minLevel", minLevel.toString());
+      }
       const res = await fetch(
-        `/api/score-export/version?version=${encodeURIComponent(
-          current.versionKey,
-        )}`,
+        `/api/score-export/version?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -267,15 +275,24 @@ export function VersionScoresTab({
             按版本查看
           </Title>
         </Group>
-        <Button
-          size="xs"
-          variant="default"
-          leftSection={<IconDownload size={14} />}
-          onClick={handleExport}
-          loading={exporting}
-        >
-          导出图片
-        </Button>
+        <Group gap="sm" align="center">
+          <Switch
+            size="xs"
+            labelPosition="left"
+            label={exportAllLevels ? "导出全部" : "导出13及以上"}
+            checked={exportAllLevels}
+            onChange={(e) => setExportAllLevels(e.currentTarget.checked)}
+          />
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<IconDownload size={14} />}
+            onClick={() => handleExport(exportAllLevels ? undefined : 13)}
+            loading={exporting}
+          >
+            导出图片
+          </Button>
+        </Group>
       </Group>
 
       {buckets.length > 0 && (

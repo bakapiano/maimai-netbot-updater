@@ -62,11 +62,14 @@ export class ScoreExportController {
     @Req() req: AuthedRequest,
     @Res() res: Response,
     @Query('version') version?: string,
+    @Query('minLevel') minLevel?: string,
   ) {
     const friendCode = requireFriendCode(req);
+    const minLevelNum = minLevel ? parseFloat(minLevel) : undefined;
     const buffer = await this.exporter.generateVersionScoresImage(
       friendCode,
       version,
+      minLevelNum,
     );
     res.setHeader('Content-Type', 'image/png');
     res.setHeader(
@@ -79,5 +82,6 @@ export class ScoreExportController {
 
 function sanitizeFilename(value?: string) {
   if (!value) return 'unknown';
-  return value.replace(/[^a-zA-Z0-9\u4e00-\u9fa5\-_]+/g, '_');
+  // Only allow ASCII-safe characters for Content-Disposition header
+  return value.replace(/[^a-zA-Z0-9\-_]+/g, '_');
 }

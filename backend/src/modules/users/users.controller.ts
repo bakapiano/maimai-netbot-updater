@@ -4,12 +4,14 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import type { Request } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
+import { getImportToken } from '../../common/prober/diving-fish/api';
 
 type AuthedRequest = Request & { userId?: string };
 
@@ -75,5 +77,30 @@ export class UsersController {
       divingFishImportToken: divingFishToken,
       lxnsImportToken: lxnsToken,
     });
+  }
+
+  /**
+   * 通过水鱼账户的用户名和密码获取 import token
+   * 注意：用户名和密码仅用于一次性获取 token，不会被保存
+   * 如果用户已有 import token 则直接返回，不会生成新的
+   */
+  @Post('diving-fish/token')
+  async getDivingFishToken(
+    @Body() body: { username?: unknown; password?: unknown },
+  ) {
+    if (typeof body.username !== 'string' || !body.username) {
+      throw new BadRequestException('username is required');
+    }
+    if (typeof body.password !== 'string' || !body.password) {
+      throw new BadRequestException('password is required');
+    }
+
+    try {
+      return await getImportToken(body.username, body.password);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '获取 token 失败';
+      throw new BadRequestException(message);
+    }
   }
 }
