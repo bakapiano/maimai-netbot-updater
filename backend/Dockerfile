@@ -10,12 +10,16 @@ RUN npm run build
 
 FROM node:20-alpine
 
+# 安装 fontconfig 以支持字体渲染
+RUN apk add --no-cache fontconfig
+
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
+COPY assets ./assets
 
 EXPOSE 9050
 

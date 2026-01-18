@@ -6,7 +6,7 @@ import { ScoreExportService } from '../modules/score-export/score-export.service
 import { join } from 'node:path';
 
 async function run() {
-  const friendCode = '';
+  const friendCode = '634142510810999';
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn'],
   });

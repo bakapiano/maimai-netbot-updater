@@ -1,7 +1,6 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CoverModule } from './modules/cover/cover.module';
 import { JobModule } from './modules/job/job.module';
@@ -50,6 +49,5 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
