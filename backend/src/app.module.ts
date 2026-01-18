@@ -1,5 +1,6 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+import { AdminModule } from './modules/admin/admin.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { CoverModule } from './modules/cover/cover.module';
@@ -41,6 +42,7 @@ import { UsersModule } from './modules/users/users.module';
       },
     }),
     AuthModule,
+    AdminModule,
     CoverModule,
     JobModule,
     MusicModule,

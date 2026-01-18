@@ -221,8 +221,8 @@ export default function AuthedLayout() {
               justifyContent: "center",
               backgroundColor:
                 colorScheme === "dark"
-                  ? "var(--mantine-color-dark-6)"
-                  : "var(--mantine-color-gray-0)",
+                  ? "var(--mantine-color-dark-4)"
+                  : "var(--mantine-color-gray-2)",
               borderRadius: 999,
               boxShadow: "var(--mantine-shadow-sm)",
             }}

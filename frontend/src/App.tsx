@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from "./providers/AuthProvider";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import AdminPage from "./pages/AdminPage";
 import AuthedLayout from "./layouts/AuthedLayout";
 import DebugPage from "./pages/DebugPage";
 import HomePage from "./pages/HomePage";
@@ -32,6 +33,7 @@ function App() {
           <MusicProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route
                 element={
                   <RequireAuth>

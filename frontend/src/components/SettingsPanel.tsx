@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Drawer,
   Group,
   SegmentedControl,
@@ -7,9 +8,16 @@ import {
   Text,
   useMantineColorScheme,
 } from "@mantine/core";
-import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
+import {
+  IconDeviceDesktop,
+  IconLogout,
+  IconMoon,
+  IconSun,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useRef, useState } from "react";
 
-import { useRef } from "react";
+import { useAuth } from "../providers/AuthProvider";
 
 type Props = {
   opened: boolean;
@@ -18,7 +26,30 @@ type Props = {
 
 export function SettingsPanel({ opened, onClose }: Props) {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { token, clearToken } = useAuth();
   const touchStartX = useRef<number | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const handleLogout = () => {
+    clearToken();
+    onClose();
+    window.location.reload();
+  };
+
+  const handleClearCache = () => {
+    setClearing(true);
+    try {
+      const token = localStorage.getItem("netbot_token");
+      localStorage.clear();
+      if (token) {
+        localStorage.setItem("netbot_token", token);
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to clear cache", err);
+      setClearing(false);
+    }
+  };
 
   return (
     <Drawer
@@ -83,6 +114,42 @@ export function SettingsPanel({ opened, onClose }: Props) {
               ]}
             />
           </div>
+
+          <div>
+            <Text size="sm" fw={500} mb="xs">
+              缓存
+            </Text>
+            <Button
+              variant="light"
+              color="red"
+              fullWidth
+              leftSection={<IconTrash size={16} />}
+              onClick={handleClearCache}
+              loading={clearing}
+            >
+              清除本地缓存
+            </Button>
+            <Text size="xs" c="dimmed" mt={4}>
+              清除所有本地缓存数据
+            </Text>
+          </div>
+
+          {token && (
+            <div>
+              <Text size="sm" fw={500} mb="xs">
+                账号
+              </Text>
+              <Button
+                variant="light"
+                color="gray"
+                fullWidth
+                leftSection={<IconLogout size={16} />}
+                onClick={handleLogout}
+              >
+                退出登录
+              </Button>
+            </div>
+          )}
         </Stack>
       </Box>
     </Drawer>

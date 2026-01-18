@@ -17,7 +17,11 @@ import {
   summarizeRanks,
   summarizeStatuses,
 } from "../../components/ScoreSummaryBadges";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconDownload,
+} from "@tabler/icons-react";
 import type { MusicChartPayload, MusicRow } from "../../types/music";
 import { useMemo, useRef, useState, useTransition } from "react";
 
@@ -73,7 +77,7 @@ const normalizeDetailKey = (chart: MusicChartPayload) => {
 
 const buildBuckets = (
   musics: MusicRow[],
-  scores: SyncScore[]
+  scores: SyncScore[],
 ): LevelBucket[] => {
   const scoreMap = new Map<string, SyncScore>();
   for (const s of scores) {
@@ -112,14 +116,14 @@ const buildBuckets = (
           detailKey,
           detailNumeric: parseLevelValue(detailKey),
           items: items.sort(
-            (a, b) => (b.score?.rating ?? 0) - (a.score?.rating ?? 0)
+            (a, b) => (b.score?.rating ?? 0) - (a.score?.rating ?? 0),
           ),
         }))
         .sort(
           (a, b) =>
-            (a.detailNumeric ?? Infinity) - (b.detailNumeric ?? Infinity)
+            (a.detailNumeric ?? Infinity) - (b.detailNumeric ?? Infinity),
         ),
-    })
+    }),
   );
 
   buckets.sort((a, b) => {
@@ -184,16 +188,16 @@ export function LevelScoresTab({
 
   const filteredMusics = useMemo(
     () => musics.filter((m) => m.type !== "utage"),
-    [musics]
+    [musics],
   );
   const filteredScores = useMemo(
     () => scores.filter((s) => s.type !== "utage"),
-    [scores]
+    [scores],
   );
 
   const buckets = useMemo(
     () => buildBuckets(filteredMusics, filteredScores),
-    [filteredMusics, filteredScores]
+    [filteredMusics, filteredScores],
   );
   const current =
     buckets.find((b) => b.levelKey === selectedLevel) ?? buckets[0];
@@ -258,7 +262,7 @@ export function LevelScoresTab({
         `/api/score-export/level?level=${encodeURIComponent(current.levelKey)}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (!res.ok) {
         throw new Error(`导出失败 (HTTP ${res.status})`);
@@ -290,7 +294,13 @@ export function LevelScoresTab({
           <Title order={4} size="h5">
             按详细定数查看
           </Title>
-          <Button size="xs" onClick={handleExport} loading={exporting}>
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<IconDownload size={14} />}
+            onClick={handleExport}
+            loading={exporting}
+          >
             导出图片
           </Button>
         </Group>

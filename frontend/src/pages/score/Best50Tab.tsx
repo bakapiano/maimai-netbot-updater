@@ -10,10 +10,11 @@ import {
 } from "@mantine/core";
 import {
   CompactMusicScoreCard,
+  MusicScoreCard,
   type DetailedMusicScoreCardProps,
 } from "../../components/MusicScoreCard";
 
-import { IconTrophy } from "@tabler/icons-react";
+import { IconTrophy, IconDownload } from "@tabler/icons-react";
 import { ScoreDetailModal } from "../../components/ScoreDetailModal";
 import type { SyncScore } from "../../types/syncScore";
 import { useMemo, useState } from "react";
@@ -50,12 +51,12 @@ const buildRatingSummary = (scores: SyncScore[]): RatingSummary | null => {
   const newSum = newTop.reduce((sum, s) => sum + (s.rating ?? 0), 0);
   const oldSum = oldTop.reduce((sum, s) => sum + (s.rating ?? 0), 0);
 
-  const newMax = newTop.length > 0 ? newTop[0].rating ?? null : null;
+  const newMax = newTop.length > 0 ? (newTop[0].rating ?? null) : null;
   const newMin =
-    newTop.length > 0 ? newTop[newTop.length - 1].rating ?? null : null;
-  const oldMax = oldTop.length > 0 ? oldTop[0].rating ?? null : null;
+    newTop.length > 0 ? (newTop[newTop.length - 1].rating ?? null) : null;
+  const oldMax = oldTop.length > 0 ? (oldTop[0].rating ?? null) : null;
   const oldMin =
-    oldTop.length > 0 ? oldTop[oldTop.length - 1].rating ?? null : null;
+    oldTop.length > 0 ? (oldTop[oldTop.length - 1].rating ?? null) : null;
 
   return {
     newTop,
@@ -89,7 +90,7 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
   const handleScoreClick = (
     score: SyncScore,
     ranking: number,
-    isNew: boolean
+    isNew: boolean,
   ) => {
     const music = musicMap.get(score.musicId);
     const chart = score.cid != null ? chartMap.get(score.cid) : undefined;
@@ -160,7 +161,13 @@ export function Best50Tab({ scores, loading }: Best50TabProps) {
         <Title size="h3" order={4}>
           Best 50
         </Title>
-        <Button size="xs" onClick={handleExport} loading={exporting}>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconDownload size={14} />}
+          onClick={handleExport}
+          loading={exporting}
+        >
           导出图片
         </Button>
       </Group>

@@ -16,7 +16,11 @@ import {
   summarizeRanks,
   summarizeStatuses,
 } from "../../components/ScoreSummaryBadges";
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconDownload,
+} from "@tabler/icons-react";
 import type { MusicChartPayload, MusicRow } from "../../types/music";
 import { useMemo, useState, useTransition } from "react";
 
@@ -73,7 +77,7 @@ const detailSortValue = (chart: MusicChartPayload) => {
 
 const buildBuckets = (
   musics: MusicRow[],
-  scores: SyncScore[]
+  scores: SyncScore[],
 ): VersionBucket[] => {
   const scoreMap = new Map<string, SyncScore>();
   for (const s of scores) {
@@ -112,14 +116,14 @@ const buildBuckets = (
           levelKey,
           levelNumeric: parseLevelValue(levelKey),
           items: items.sort(
-            (a, b) => detailSortValue(b.chart) - detailSortValue(a.chart)
+            (a, b) => detailSortValue(b.chart) - detailSortValue(a.chart),
           ),
         }))
         .sort(
           (a, b) =>
-            (b.levelNumeric ?? -Infinity) - (a.levelNumeric ?? -Infinity)
+            (b.levelNumeric ?? -Infinity) - (a.levelNumeric ?? -Infinity),
         ),
-    })
+    }),
   );
 
   // Sort by predefined version order (newest first), unknown versions last
@@ -189,16 +193,16 @@ export function VersionScoresTab({
 
   const filteredMusics = useMemo(
     () => musics.filter((m) => m.type !== "utage"),
-    [musics]
+    [musics],
   );
   const filteredScores = useMemo(
     () => scores.filter((s) => s.type !== "utage"),
-    [scores]
+    [scores],
   );
 
   const buckets = useMemo(
     () => buildBuckets(filteredMusics, filteredScores),
-    [filteredMusics, filteredScores]
+    [filteredMusics, filteredScores],
   );
   const versionOptions = buckets.map((b) => ({
     value: b.versionKey,
@@ -215,8 +219,8 @@ export function VersionScoresTab({
       showAllLevels
         ? lvl.items
         : lvl.items.filter(
-            (entry) => detailSortValue(entry.chart) >= detailThreshold
-          )
+            (entry) => detailSortValue(entry.chart) >= detailThreshold,
+          ),
     );
   }, [current, showAllLevels]);
 
@@ -226,11 +230,11 @@ export function VersionScoresTab({
     try {
       const res = await fetch(
         `/api/score-export/version?version=${encodeURIComponent(
-          current.versionKey
+          current.versionKey,
         )}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (!res.ok) {
         throw new Error(`导出失败 (HTTP ${res.status})`);
@@ -263,7 +267,13 @@ export function VersionScoresTab({
             按版本查看
           </Title>
         </Group>
-        <Button size="xs" onClick={handleExport} loading={exporting}>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconDownload size={14} />}
+          onClick={handleExport}
+          loading={exporting}
+        >
           导出图片
         </Button>
       </Group>
@@ -305,7 +315,7 @@ export function VersionScoresTab({
               const visibleItems = showAllLevels
                 ? level.items
                 : level.items.filter(
-                    (entry) => detailSortValue(entry.chart) >= detailThreshold
+                    (entry) => detailSortValue(entry.chart) >= detailThreshold,
                   );
               if (visibleItems.length === 0) return null;
               const isLastVisible = (() => {
@@ -315,7 +325,7 @@ export function VersionScoresTab({
                     ? nxt.items
                     : nxt.items.filter(
                         (entry) =>
-                          detailSortValue(entry.chart) >= detailThreshold
+                          detailSortValue(entry.chart) >= detailThreshold,
                       );
                   if (nxtVisible.length > 0) return false;
                 }

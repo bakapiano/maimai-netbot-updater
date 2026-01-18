@@ -26,15 +26,6 @@ export function ensureFontsLoaded() {
 
   if (fonts?.loadFontsFromDir) {
     fonts.loadFontsFromDir(FONT_DIR);
-    console.log(`[Fonts] Loaded fonts from: ${FONT_DIR}`);
-
-    // 打印已注册的字体族，便于调试
-    if (fonts.families) {
-      const familyNames = fonts.families.map((f) => f.family);
-      console.log(
-        `[Fonts] Registered font families: ${familyNames.join(', ')}`,
-      );
-    }
   }
 
   fontsLoaded = true;

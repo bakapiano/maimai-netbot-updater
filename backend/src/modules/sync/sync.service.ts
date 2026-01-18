@@ -83,8 +83,8 @@ export class SyncService {
     const scores = Array.isArray(sync.scores) ? sync.scores : [];
     return {
       id: sync.id,
-      createdAt: sync.createdAt,
-      updatedAt: sync.updatedAt,
+      // createdAt: sync.createdAt,
+      // updatedAt: sync.updatedAt,
       scores,
     };
   }

@@ -15,7 +15,7 @@ async function run() {
   await mkdir(outputDir, { recursive: true });
 
   const best50 = await exporter.generateBest50Image(friendCode);
-  const level = await exporter.generateLevelScoresImage(friendCode);
+  const level = await exporter.generateLevelScoresImage(friendCode, '14+');
   const version = await exporter.generateVersionScoresImage(friendCode);
 
   await writeFile(join(outputDir, 'best50.png'), best50);

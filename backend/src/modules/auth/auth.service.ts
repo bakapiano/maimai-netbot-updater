@@ -4,17 +4,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { ConfigService } from '@nestjs/config';
 import { JobService } from '../job/job.service';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
+  private readonly skipAuth: boolean;
+
   constructor(
     private readonly jwt: JwtService,
     private readonly users: UsersService,
     private readonly jobs: JobService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.skipAuth = config.get<string>('SKIP_AUTH', 'false') === 'true';
+  }
 
   async requestLogin(friendCode: string, skipUpdateScore = true) {
     const normalized = friendCode.trim();
@@ -25,6 +31,23 @@ export class AuthService {
     let user = await this.users.findByFriendCode(normalized);
     if (!user) {
       user = await this.users.create({ friendCode: normalized });
+    }
+
+    console.log(this.skipAuth);
+
+    // Skip auth: directly return token without creating job, for testing purposes
+    if (this.skipAuth) {
+      const now = Math.floor(Date.now() / 1000);
+      const userId = String(user._id);
+      const payload = {
+        sub: userId,
+        friendCode: user.friendCode,
+        iat: now,
+      };
+      const token = await this.jwt.signAsync(payload, {
+        expiresIn: '30d',
+      });
+      return { skipAuth: true, token, user };
     }
 
     const { jobId } = await this.jobs.create({

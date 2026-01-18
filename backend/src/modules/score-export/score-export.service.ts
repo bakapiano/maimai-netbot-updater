@@ -57,6 +57,7 @@ export class ScoreExportService {
         oldCards,
       },
       (musicId) => this.loadCoverImage(musicId),
+      (icon) => this.loadIconImage(icon),
     );
   }
 
@@ -79,6 +80,7 @@ export class ScoreExportService {
       current,
       levelKey ?? current.levelKey,
       (musicId) => this.loadCoverImage(musicId),
+      (icon) => this.loadIconImage(icon),
     );
   }
 
@@ -102,6 +104,7 @@ export class ScoreExportService {
       current,
       versionKey ?? current.versionKey,
       (musicId) => this.loadCoverImage(musicId),
+      (icon) => this.loadIconImage(icon),
     );
   }
 
@@ -193,6 +196,21 @@ export class ScoreExportService {
 
     const padded = musicId.length < 5 ? musicId.padStart(5, '0') : musicId;
     const url = `https://www.diving-fish.com/covers/${padded}.png`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return loadImage(buf);
+    } catch {
+      return null;
+    }
+  }
+
+  private async loadIconImage(
+    icon: string,
+  ): Promise<Awaited<ReturnType<typeof loadImage>> | null> {
+    const url = `https://maimai.wahlap.com/maimai-mobile/img/music_icon_${icon}.png`;
 
     try {
       const res = await fetch(url);

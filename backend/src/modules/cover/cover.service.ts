@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { MusicEntity } from '../music/music.schema';
@@ -46,6 +46,15 @@ export class CoverService {
       return path;
     } catch {
       return null;
+    }
+  }
+
+  async getCoverCount(): Promise<number> {
+    try {
+      const files = await readdir(this.baseDir);
+      return files.filter((f) => f.endsWith('.png')).length;
+    } catch {
+      return 0;
     }
   }
 

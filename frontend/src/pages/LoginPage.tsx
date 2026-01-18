@@ -24,7 +24,9 @@ import { notifications } from "@mantine/notifications";
 import { useAuth } from "../providers/AuthProvider";
 import { useNavigate } from "react-router-dom";
 
-type LoginRequest = { jobId: string; userId: string };
+type LoginRequest =
+  | { jobId: string; userId: string }
+  | { skipAuth: true; token: string; user: { friendCode: string } };
 
 type LoginStatus = {
   status?: string;
@@ -214,6 +216,20 @@ export default function LoginPage() {
     });
 
     if (res.ok && res.data) {
+      // Handle skipAuth mode - direct token response
+      if ("skipAuth" in res.data && res.data.skipAuth) {
+        setToken(res.data.token);
+        notifications.show({
+          title: "登录成功",
+          message: "已跳过验证直接登录",
+          color: "green",
+        });
+        navigate("/");
+        setLoading(false);
+        return;
+      }
+
+      // Normal flow - poll job status
       setJobId(res.data.jobId);
       setPolling(true);
       try {

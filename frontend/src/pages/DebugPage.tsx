@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../providers/AuthProvider";
 
-type LoginRequest = { jobId: string; userId: string };
+type LoginRequest =
+  | { jobId: string; userId: string }
+  | { skipAuth: true; token: string; user: { friendCode: string } };
 
 type SyncScore = {
   musicId: string;
@@ -58,7 +60,7 @@ function buildRatingSummary(detail: SyncDetail): RatingSummary | null {
   if (!detail || !Array.isArray(detail.scores)) return null;
 
   const scores = detail.scores.filter(
-    (s) => typeof s === "object"
+    (s) => typeof s === "object",
   ) as SyncScore[];
   const withRating = scores.filter((s) => typeof s.rating === "number");
 
@@ -100,7 +102,7 @@ function DebugPage() {
   const [syncsResp, setSyncsResp] = useState<string>("");
   const [, setSyncDetailObj] = useState<SyncDetail | null>(null);
   const [ratingSummary, setRatingSummary] = useState<RatingSummary | null>(
-    null
+    null,
   );
   const [exportResp, setExportResp] = useState<string>("");
   const [exportLxnsResp, setExportLxnsResp] = useState<string>("");
@@ -124,7 +126,7 @@ function DebugPage() {
 
     const handle = setInterval(async () => {
       const res = await fetchJson<any>(
-        `/api/auth/login-status?jobId=${loginReq.jobId}`
+        `/api/auth/login-status?jobId=${loginReq.jobId}`,
       );
       if (!res.ok) {
         setJobStatus(`HTTP ${res.status}`);
@@ -160,6 +162,13 @@ function DebugPage() {
     });
 
     if (res.ok && res.data) {
+      // Handle skipAuth mode - direct token response
+      if ("skipAuth" in res.data && res.data.skipAuth) {
+        setToken(res.data.token);
+        setJobStatus("Logged in directly (skipAuth mode)");
+        return;
+      }
+
       setLoginReq(res.data);
       setPolling(true);
     } else {
@@ -179,10 +188,10 @@ function DebugPage() {
       setProfileTokenInput(
         typeof data?.divingFishImportToken === "string"
           ? data.divingFishImportToken
-          : ""
+          : "",
       );
       setProfileLxnsTokenInput(
-        typeof data?.lxnsImportToken === "string" ? data.lxnsImportToken : ""
+        typeof data?.lxnsImportToken === "string" ? data.lxnsImportToken : "",
       );
     } else {
       setProfileResp(`HTTP ${res.status}`);
@@ -208,7 +217,7 @@ function DebugPage() {
     });
 
     setProfilePatchResp(
-      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`
+      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`,
     );
   };
 
@@ -247,7 +256,7 @@ function DebugPage() {
     });
 
     setExportResp(
-      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`
+      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`,
     );
   };
 
@@ -266,7 +275,7 @@ function DebugPage() {
     });
 
     setExportLxnsResp(
-      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`
+      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`,
     );
   };
 
@@ -276,7 +285,7 @@ function DebugPage() {
       method: "POST",
     });
     setCoverSyncResp(
-      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`
+      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`,
     );
   };
 
@@ -284,7 +293,7 @@ function DebugPage() {
     setMusicSyncResp("Running...");
     const res = await fetchJson<any>("/api/music/sync", { method: "POST" });
     setMusicSyncResp(
-      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`
+      res.ok ? JSON.stringify(res.data, null, 2) : `HTTP ${res.status}`,
     );
   };
 
