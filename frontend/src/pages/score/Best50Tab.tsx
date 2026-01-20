@@ -10,7 +10,6 @@ import {
 } from "@mantine/core";
 import {
   CompactMusicScoreCard,
-  MusicScoreCard,
   type DetailedMusicScoreCardProps,
 } from "../../components/MusicScoreCard";
 

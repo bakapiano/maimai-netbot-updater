@@ -230,11 +230,13 @@ export default function LoginPage() {
       }
 
       // Normal flow - poll job status
-      setJobId(res.data.jobId);
-      setPolling(true);
-      try {
-        localStorage.setItem("pendingLoginJobId", res.data.jobId);
-      } catch {}
+      if ("jobId" in res.data) {
+        setJobId(res.data.jobId);
+        setPolling(true);
+        try {
+          localStorage.setItem("pendingLoginJobId", res.data.jobId);
+        } catch {}
+      }
     } else {
       const errorData = res.data as { message?: string; error?: string } | null;
       const errorMessage =

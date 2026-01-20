@@ -123,6 +123,7 @@ function DebugPage() {
 
   useEffect(() => {
     if (!loginReq || token || polling === false) return;
+    if (!("jobId" in loginReq)) return;
 
     const handle = setInterval(async () => {
       const res = await fetchJson<any>(
@@ -373,7 +374,7 @@ function DebugPage() {
                 Create login job
               </button>
             </div>
-            {loginReq && (
+            {loginReq && "jobId" in loginReq && (
               <div style={{ marginTop: 8, fontSize: 14, opacity: 0.8 }}>
                 jobId: <code>{loginReq.jobId}</code>
               </div>

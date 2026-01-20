@@ -6,3 +6,4 @@
 - [] 中二支持
 - [] 添加 deploy 的时候 worker 自动丢回 job
 - [] 离线模式 - 仅使用前端 cache 在服务器挂了的时候
+- [] 保护 job upsert 相关 API
