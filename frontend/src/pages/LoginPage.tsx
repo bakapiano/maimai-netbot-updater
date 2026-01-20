@@ -329,7 +329,7 @@ export default function LoginPage() {
                   <Stack gap="md">
                     <TextInput
                       label="好友代码"
-                      placeholder="请输入 NET 好友代码，例如 634142510810999"
+                      placeholder="请输入 NET 好友代码"
                       value={friendCode}
                       onChange={(e) => {
                         const val = e.currentTarget.value;

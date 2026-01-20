@@ -1,0 +1,45 @@
+name: deploy frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.FRONTEND_HOST }}
+          username: ${{ secrets.FRONTEND_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ${{ secrets.FRONTEND_PATH }}
+            sudo chown -R "$USER:$USER" "$(pwd)" || true
+            git config --global --add safe.directory "$(pwd)"
+            git fetch --all
+            git checkout main
+            git pull
+            if command -v docker-compose >/dev/null 2>&1; then
+              sudo docker-compose -f frontend/docker-compose.yml up -d --build
+            else
+              sudo docker compose -f frontend/docker-compose.yml up -d --build
+            fi
+            for i in 1 2 3 4 5; do
+              if curl -fsS http://localhost:8848 >/dev/null; then
+                echo "Health check passed"
+                exit 0
+              fi
+              echo "Attempt $i failed, retrying in 5 seconds..."
+              sleep 5
+            done
+            echo "Health check failed after 5 attempts"
+            exit 1
