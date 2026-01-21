@@ -29,9 +29,9 @@ jobs:
             git checkout main
             git pull
             if command -v docker-compose >/dev/null 2>&1; then
-              sudo docker-compose -f frontend/docker-compose.yml up -d --build
+              sudo docker-compose -f frontend/docker-compose.yml up -d --build || exit 1
             else
-              sudo docker compose -f frontend/docker-compose.yml up -d --build
+              sudo docker compose -f frontend/docker-compose.yml up -d --build || exit 1
             fi
             for i in 1 2 3 4 5; do
               if curl -fsS http://localhost:8848 >/dev/null; then

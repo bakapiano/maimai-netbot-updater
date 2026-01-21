@@ -12,9 +12,10 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
   useMantineColorScheme,
 } from "@mantine/core";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconInfoCircle, IconCopy } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProfileCard, type UserProfile } from "../components/ProfileCard";
@@ -22,7 +23,7 @@ import { AppHeader } from "../components/AppHeader";
 import { PageHeader } from "../components/PageHeader";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../providers/AuthProvider";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type LoginRequest =
   | { jobId: string; userId: string }
@@ -46,10 +47,16 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { token, setToken } = useAuth();
 
   const [friendCode, setFriendCode] = useState(() => {
     try {
+      // 优先从 URL 参数读取
+      const urlFriendCode = searchParams.get("friendCode");
+      if (urlFriendCode && /^\d{1,15}$/.test(urlFriendCode)) {
+        return urlFriendCode;
+      }
       return localStorage.getItem("lastFriendCode") || "";
     } catch {
       return "";
@@ -89,6 +96,13 @@ export default function LoginPage() {
     () => /^\d{15}$/.test(friendCode.trim()) && !loading,
     [friendCode, loading],
   );
+
+  const quickLoginUrl = useMemo(() => {
+    if (friendCode.trim().length === 15) {
+      return `${window.location.origin}/login?friendCode=${friendCode.trim()}`;
+    }
+    return "";
+  }, [friendCode]);
 
   useEffect(() => {
     if (token) {
@@ -327,25 +341,47 @@ export default function LoginPage() {
               ) : (
                 <Paper shadow="xs" p="lg" radius="md" withBorder>
                   <Stack gap="md">
-                    <TextInput
-                      label="好友代码"
-                      placeholder="请输入 NET 好友代码"
-                      value={friendCode}
-                      onChange={(e) => {
-                        const val = e.currentTarget.value;
-                        if (/^\d*$/.test(val) && val.length <= 15) {
-                          setFriendCode(val);
+                    <Group align="flex-end" gap="xs">
+                      <TextInput
+                        label="好友代码"
+                        placeholder="请输入 NET 好友代码"
+                        value={friendCode}
+                        onChange={(e) => {
+                          const val = e.currentTarget.value;
+                          if (/^\d*$/.test(val) && val.length <= 15) {
+                            setFriendCode(val);
+                          }
+                        }}
+                        disabled={polling}
+                        required
+                        styles={{ label: { textAlign: "left" } }}
+                        error={
+                          friendCode && friendCode.length !== 15
+                            ? "好友代码必须是 15 位数字"
+                            : null
                         }
-                      }}
-                      disabled={polling}
-                      required
-                      styles={{ label: { textAlign: "left" } }}
-                      error={
-                        friendCode && friendCode.length !== 15
-                          ? "好友代码必须是 15 位数字"
-                          : null
-                      }
-                    />
+                        style={{ flex: 1 }}
+                      />
+                      {quickLoginUrl && !polling && (
+                        <Tooltip label="复制快速登录链接" withArrow>
+                          <Button
+                            variant="light"
+                            onClick={() => {
+                              navigator.clipboard.writeText(quickLoginUrl);
+                              notifications.show({
+                                title: "快速登录链接已复制！",
+                                message: "从此链接进入可自动填写好友代码",
+                                color: "teal",
+                              });
+                            }}
+                            color="blue"
+                            px="xs"
+                          >
+                            <IconCopy size={18} />
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </Group>
 
                     <Checkbox
                       label="同时更新成绩"
