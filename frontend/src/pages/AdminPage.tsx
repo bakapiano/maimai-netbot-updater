@@ -11,11 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import {
-  Box,
   Button,
   Card,
   Container,
-  Grid,
   Group,
   Pagination,
   PasswordInput,
@@ -28,7 +26,6 @@ import {
 import {
   IconArrowsExchange,
   IconChartBar,
-  IconDatabase,
   IconMusic,
   IconPhoto,
   IconRefresh,
@@ -135,42 +132,6 @@ async function adminFetch<T>(
   }
 }
 
-function StatCard({
-  title,
-  value,
-  icon,
-  color,
-}: {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-}) {
-  return (
-    <Card withBorder shadow="sm" padding="lg" radius="md">
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            {title}
-          </Text>
-          <Text size="xl" fw={700} mt={4}>
-            {value}
-          </Text>
-        </div>
-        <Box
-          style={{
-            backgroundColor: `var(--mantine-color-${color}-light)`,
-            borderRadius: "var(--mantine-radius-md)",
-            padding: 8,
-          }}
-        >
-          {icon}
-        </Box>
-      </Group>
-    </Card>
-  );
-}
-
 export default function AdminPage() {
   const { password, savePassword } = useAdminPassword();
   const [inputPassword, setInputPassword] = useState(password);
@@ -178,8 +139,9 @@ export default function AdminPage() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
 
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
+  // Stats are fetched but currently not displayed in UI
+  const [_stats, setStats] = useState<AdminStats | null>(null);
+  const [_statsLoading, setStatsLoading] = useState(false);
 
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [jobStatsLoading, setJobStatsLoading] = useState(false);
