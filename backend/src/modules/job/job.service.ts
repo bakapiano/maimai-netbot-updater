@@ -8,7 +8,12 @@ import type { Model } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 import { SyncService } from '../sync/sync.service';
-import type { JobResponse, JobStage, JobStatus } from './job.types';
+import type {
+  JobPatchBody,
+  JobResponse,
+  JobStage,
+  JobStatus,
+} from './job.types';
 import { JobEntity } from './job.schema';
 
 export interface RecentJobStats {
@@ -40,6 +45,7 @@ function toJobResponse(job: JobEntity): JobResponse {
     result: job.result,
     profile: job.profile,
     scoreProgress: job.scoreProgress ?? null,
+    updateScoreDuration: job.updateScoreDuration ?? null,
     error: job.error ?? null,
     executing: job.executing,
     createdAt: job.createdAt.toISOString(),
@@ -164,10 +170,9 @@ export class JobService {
     return toJobResponse(claimed.toObject() as JobEntity);
   }
 
-  async patch(jobId: string, body: any): Promise<JobResponse> {
+  async patch(jobId: string, body: JobPatchBody): Promise<JobResponse> {
     const update: Partial<JobEntity> = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const additionalOps: Record<string, any> = {};
+    const additionalOps: Record<string, unknown> = {};
 
     if (body.botUserFriendCode !== undefined) {
       if (
@@ -240,6 +245,19 @@ export class JobService {
       update.updatedAt = parsed;
     } else {
       update.updatedAt = new Date();
+    }
+
+    // 处理 updateScoreDuration
+    if (body.updateScoreDuration !== undefined) {
+      if (
+        body.updateScoreDuration !== null &&
+        typeof body.updateScoreDuration !== 'number'
+      ) {
+        throw new BadRequestException(
+          'updateScoreDuration must be a number or null',
+        );
+      }
+      update.updateScoreDuration = body.updateScoreDuration;
     }
 
     // 处理 scoreProgress：完整替换模式

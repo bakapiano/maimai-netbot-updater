@@ -12,6 +12,7 @@ import {
 import type { Response } from 'express';
 
 import { JobService } from './job.service';
+import type { JobPatchBody } from './job.types';
 
 @Controller('job')
 export class JobController {
@@ -68,7 +69,7 @@ export class JobController {
   }
 
   @Patch(':jobId')
-  async patch(@Param('jobId') jobId: string, @Body() body: any) {
+  async patch(@Param('jobId') jobId: string, @Body() body: JobPatchBody) {
     return this.jobs.patch(jobId, body);
   }
 }

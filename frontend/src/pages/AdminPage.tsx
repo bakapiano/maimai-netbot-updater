@@ -72,6 +72,16 @@ interface JobTrend {
   withUpdateScore: JobTrendPoint[];
 }
 
+interface JobErrorStatsItem {
+  error: string;
+  count: number;
+}
+
+interface JobErrorStats {
+  label: string;
+  items: JobErrorStatsItem[];
+}
+
 interface AdminUser {
   id: string;
   friendCode: string;
@@ -149,6 +159,12 @@ export default function AdminPage() {
   const [jobTrend, setJobTrend] = useState<JobTrend | null>(null);
   const [jobTrendLoading, setJobTrendLoading] = useState(false);
 
+  const [jobErrorStats, setJobErrorStats] = useState<JobErrorStats[] | null>(
+    null,
+  );
+  const [jobErrorStatsLoading, setJobErrorStatsLoading] = useState(false);
+  const [selectedErrorTimeRange, setSelectedErrorTimeRange] = useState(0);
+
   const [coverSyncing, setCoverSyncing] = useState(false);
   const [coverSyncResult, setCoverSyncResult] = useState<string>("");
 
@@ -220,6 +236,19 @@ export default function AdminPage() {
     setJobTrendLoading(false);
     if (res.ok) {
       setJobTrend(res.data ?? null);
+    }
+  }, [password]);
+
+  const loadJobErrorStats = useCallback(async () => {
+    if (!password) return;
+    setJobErrorStatsLoading(true);
+    const res = await adminFetch<JobErrorStats[]>(
+      "/api/admin/job-error-stats",
+      password,
+    );
+    setJobErrorStatsLoading(false);
+    if (res.ok) {
+      setJobErrorStats(res.data ?? null);
     }
   }, [password]);
 
@@ -313,6 +342,13 @@ export default function AdminPage() {
       void loadJobTrend();
     }
   }, [verified, password, jobTrend, loadJobTrend]);
+
+  // Load job error stats when verified
+  useEffect(() => {
+    if (verified && password && !jobErrorStats) {
+      void loadJobErrorStats();
+    }
+  }, [verified, password, jobErrorStats, loadJobErrorStats]);
 
   if (!verified) {
     return (
@@ -433,6 +469,7 @@ export default function AdminPage() {
                   <Tabs.Tab value="charts">图表</Tabs.Tab>
                   <Tabs.Tab value="withUpdate">包含分数更新</Tabs.Tab>
                   <Tabs.Tab value="skipUpdate">跳过分数更新</Tabs.Tab>
+                  <Tabs.Tab value="errors">失败原因统计</Tabs.Tab>
                 </Tabs.List>
 
                 <Tabs.Panel value="withUpdate" pt="md">
@@ -501,6 +538,67 @@ export default function AdminPage() {
                       ))}
                     </Table.Tbody>
                   </Table>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="errors" pt="md">
+                  {jobErrorStats && jobErrorStats.length > 0 ? (
+                    <Stack gap="md">
+                      <Group gap="xs">
+                        {jobErrorStats.map((range, idx) => (
+                          <Button
+                            key={range.label}
+                            variant={
+                              selectedErrorTimeRange === idx
+                                ? "filled"
+                                : "light"
+                            }
+                            size="xs"
+                            onClick={() => setSelectedErrorTimeRange(idx)}
+                          >
+                            {range.label}
+                          </Button>
+                        ))}
+                      </Group>
+                      {(jobErrorStats[selectedErrorTimeRange]?.items?.length ??
+                        0) > 0 ? (
+                        <Table striped highlightOnHover withTableBorder>
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>错误信息</Table.Th>
+                              <Table.Th ta="right" w={100}>
+                                次数
+                              </Table.Th>
+                            </Table.Tr>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {jobErrorStats[selectedErrorTimeRange]?.items.map(
+                              (row, idx) => (
+                                <Table.Tr key={idx}>
+                                  <Table.Td>
+                                    <Text
+                                      size="sm"
+                                      style={{ wordBreak: "break-all" }}
+                                    >
+                                      {row.error}
+                                    </Text>
+                                  </Table.Td>
+                                  <Table.Td ta="right">{row.count}</Table.Td>
+                                </Table.Tr>
+                              ),
+                            )}
+                          </Table.Tbody>
+                        </Table>
+                      ) : (
+                        <Text size="sm" c="dimmed" ta="center">
+                          该时间段内暂无失败记录
+                        </Text>
+                      )}
+                    </Stack>
+                  ) : (
+                    <Text size="sm" c="dimmed" ta="center">
+                      {jobErrorStatsLoading ? "加载中..." : "暂无失败记录"}
+                    </Text>
+                  )}
                 </Tabs.Panel>
 
                 <Tabs.Panel value="charts" pt="md">

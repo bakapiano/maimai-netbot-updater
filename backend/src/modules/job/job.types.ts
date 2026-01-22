@@ -21,6 +21,24 @@ import type { UserNetProfile } from '../users/user.types';
 
 export type UserProfile = UserNetProfile;
 
+/**
+ * Job patch request body
+ */
+export interface JobPatchBody {
+  botUserFriendCode?: string | null;
+  status?: JobStatus;
+  stage?: JobStage;
+  result?: unknown;
+  profile?: UserProfile;
+  error?: string | null;
+  friendRequestSentAt?: string | null;
+  executing?: boolean;
+  updatedAt?: string;
+  scoreProgress?: ScoreProgress | null;
+  addCompletedDiff?: number;
+  updateScoreDuration?: number | null;
+}
+
 export interface JobResponse {
   id: string;
   friendCode: string;

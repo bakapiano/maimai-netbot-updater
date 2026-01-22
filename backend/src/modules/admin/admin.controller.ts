@@ -23,6 +23,11 @@ export class AdminController {
     return await this.adminService.getJobTrend();
   }
 
+  @Get('job-error-stats')
+  async getJobErrorStats() {
+    return await this.adminService.getJobErrorStats();
+  }
+
   @Get('users')
   async getAllUsers() {
     return this.adminService.getAllUsers();

@@ -47,6 +47,16 @@ export interface JobTrend {
   withUpdateScore: JobTrendPoint[];
 }
 
+export interface JobErrorStatsItem {
+  error: string;
+  count: number;
+}
+
+export interface JobErrorStats {
+  label: string;
+  items: JobErrorStatsItem[];
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -306,5 +316,58 @@ export class AdminService {
       skipUpdateScore,
       withUpdateScore,
     };
+  }
+
+  async getJobErrorStats(): Promise<JobErrorStats[]> {
+    const now = new Date();
+    const timeRanges = [
+      { label: '1小时', ms: 60 * 60 * 1000 },
+      { label: '24小时', ms: 24 * 60 * 60 * 1000 },
+      { label: '7天', ms: 7 * 24 * 60 * 60 * 1000 },
+      { label: '30天', ms: 30 * 24 * 60 * 60 * 1000 },
+      { label: '全部', ms: Infinity },
+    ];
+
+    const buildErrorStatsForRange = async (
+      startTime: Date | null,
+    ): Promise<JobErrorStatsItem[]> => {
+      const matchFilter: Record<string, unknown> = {
+        status: 'failed',
+        error: { $ne: null, $exists: true },
+      };
+      if (startTime) {
+        matchFilter.createdAt = { $gte: startTime };
+      }
+
+      const results = await this.jobModel.aggregate<{
+        _id: string;
+        count: number;
+      }>([
+        { $match: matchFilter },
+        {
+          $group: {
+            _id: '$error',
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 50 },
+      ]);
+
+      return results.map((r) => ({
+        error: r._id || '未知错误',
+        count: r.count,
+      }));
+    };
+
+    const errorStats: JobErrorStats[] = [];
+    for (const range of timeRanges) {
+      const startTime =
+        range.ms === Infinity ? null : new Date(now.getTime() - range.ms);
+      const items = await buildErrorStatsForRange(startTime);
+      errorStats.push({ label: range.label, items });
+    }
+
+    return errorStats;
   }
 }
