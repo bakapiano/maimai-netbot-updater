@@ -7,6 +7,7 @@ export * from "./maimai-client.ts";
 export * from "./friend-manager.ts";
 export * from "./score-aggregator.ts";
 export * from "./job-handler.ts";
+export * from "./cleanup-service.ts";
 export * from "./worker-scheduler.ts";
 
 // Re-export types

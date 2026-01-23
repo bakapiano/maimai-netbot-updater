@@ -3,31 +3,32 @@
  * 封装所有与舞萌网站的 HTTP 交互
  */
 
-import { CookieJar } from "tough-cookie";
-import makeFetchCookie from "fetch-cookie";
-import config from "../config.ts";
 import {
-  WECHAT_USER_AGENT,
-  DEFAULT_HEADERS,
-  MAIMAI_URLS,
   COOKIE_EXPIRE_LOCATIONS,
   COOKIE_EXPIRE_MARKERS,
-  TIMEOUTS,
+  DEFAULT_HEADERS,
+  MAIMAI_URLS,
   RETRY,
+  TIMEOUTS,
+  WECHAT_USER_AGENT,
 } from "../constants.ts";
 import type {
-  GameType,
   FetchOptions,
-  UserProfile,
+  GameType,
   SentFriendRequest,
+  UserProfile,
 } from "../types/index.ts";
 import {
-  parseUserProfile,
+  parseAcceptRequests,
   parseFriendList,
   parseSentRequests,
-  parseAcceptRequests,
   parseUserFriendCode,
+  parseUserProfile,
 } from "../parsers/index.ts";
+
+import { CookieJar } from "tough-cookie";
+import config from "../config.ts";
+import makeFetchCookie from "fetch-cookie";
 
 /**
  * Cookie 已过期错误
@@ -42,13 +43,17 @@ export class CookieExpiredError extends Error {
 /**
  * 从 HTML 中提取 container_red 错误信息
  */
-function extractContainerRedMessage(body: string): string | null {
+export function extractContainerRedMessage(body: string): string | null {
   const match = body.match(
-    /<div\s+class="container_red p_10"[^>]*>([\s\S]*?)<\/div>/i
+    /<div\s+class="container_red[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<footer|$)/i,
   );
   if (!match) return null;
   const innerHtml = match[1];
-  const text = innerHtml.replace(/<[^>]*>/g, "").trim();
+  // 去除所有 HTML 标签，保留文本内容
+  const text = innerHtml
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return text || null;
 }
 
@@ -84,7 +89,7 @@ export class MaimaiHttpClient {
     url: string,
     options: FetchOptions = {},
     timeout?: number,
-    throwOnCookieExpire = false
+    throwOnCookieExpire = false,
   ): Promise<Response> {
     const fetchWithCookie = makeFetchCookie(global.fetch, this.cookieJar);
     const retryCount = config.fetchRetryCount ?? RETRY.defaultCount;
@@ -129,7 +134,7 @@ export class MaimaiHttpClient {
         console.log(
           `Delay due to fetch failed with attempt ${url} #${
             i + 1
-          }, error: ${error}`
+          }, error: ${error}`,
         );
 
         if (i === retryCount - 1) {
@@ -151,7 +156,7 @@ export class MaimaiHttpClient {
    */
   async fetchWithToken(
     url: string,
-    options: FetchOptions = {}
+    options: FetchOptions = {},
   ): Promise<Response> {
     let fetchOptions = { ...options };
 
@@ -220,14 +225,14 @@ export class MaimaiHttpClient {
    */
   async getUserProfile(friendCode: string): Promise<UserProfile | null> {
     console.log(
-      `[MaimaiClient] Start get user profile by friend code ${friendCode}`
+      `[MaimaiClient] Start get user profile by friend code ${friendCode}`,
     );
     const url = MAIMAI_URLS.friendSearch(friendCode);
     const result = await this.fetchWithToken(url);
     const text = await result.text();
     const profile = parseUserProfile(text);
     console.log(
-      `[MaimaiClient] Done get user profile by friend code ${friendCode}`
+      `[MaimaiClient] Done get user profile by friend code ${friendCode}`,
     );
     return profile;
   }
@@ -237,7 +242,7 @@ export class MaimaiHttpClient {
    */
   async sendFriendRequest(friendCode: string): Promise<void> {
     console.log(
-      `[MaimaiClient] Start send friend request, friend code ${friendCode}`
+      `[MaimaiClient] Start send friend request, friend code ${friendCode}`,
     );
     await this.fetchWithToken(MAIMAI_URLS.friendSearchInvite, {
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -248,7 +253,7 @@ export class MaimaiHttpClient {
 
     await this.fetchWithToken(MAIMAI_URLS.friendInvite);
     console.log(
-      `[MaimaiClient] Done send friend request, friend code ${friendCode}`
+      `[MaimaiClient] Done send friend request, friend code ${friendCode}`,
     );
   }
 
@@ -257,7 +262,7 @@ export class MaimaiHttpClient {
    */
   async allowFriendRequest(friendCode: string): Promise<void> {
     console.log(
-      `[MaimaiClient] Start allow friend request, friend code ${friendCode}`
+      `[MaimaiClient] Start allow friend request, friend code ${friendCode}`,
     );
     await this.fetchWithToken(MAIMAI_URLS.friendAcceptAllow, {
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -268,7 +273,7 @@ export class MaimaiHttpClient {
 
     await this.fetchWithToken(MAIMAI_URLS.friendAcceptAllow);
     console.log(
-      `[MaimaiClient] Done allow friend request, friend code ${friendCode}`
+      `[MaimaiClient] Done allow friend request, friend code ${friendCode}`,
     );
   }
 
@@ -277,7 +282,7 @@ export class MaimaiHttpClient {
    */
   async cancelFriendRequest(friendCode: string): Promise<void> {
     console.log(
-      `[MaimaiClient] Start cancel friend request, friend code ${friendCode}`
+      `[MaimaiClient] Start cancel friend request, friend code ${friendCode}`,
     );
     await this.fetchWithToken(MAIMAI_URLS.friendInviteCancel, {
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -286,7 +291,7 @@ export class MaimaiHttpClient {
       addToken: true,
     });
     console.log(
-      `[MaimaiClient] Done cancel friend request, friend code ${friendCode}`
+      `[MaimaiClient] Done cancel friend request, friend code ${friendCode}`,
     );
   }
 
@@ -295,7 +300,7 @@ export class MaimaiHttpClient {
    */
   async removeFriend(friendCode: string): Promise<void> {
     console.log(
-      `[MaimaiClient] Start remove friend, friend code ${friendCode}`
+      `[MaimaiClient] Start remove friend, friend code ${friendCode}`,
     );
     await this.fetchWithToken(MAIMAI_URLS.friendDetail, {
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -311,7 +316,7 @@ export class MaimaiHttpClient {
    */
   async favoriteOnFriend(friendCode: string): Promise<void> {
     console.log(
-      `[MaimaiClient] Start favorite on friend, friend code ${friendCode}`
+      `[MaimaiClient] Start favorite on friend, friend code ${friendCode}`,
     );
     await this.fetchWithToken(MAIMAI_URLS.friendFavoriteOn, {
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -320,7 +325,7 @@ export class MaimaiHttpClient {
       addToken: true,
     });
     console.log(
-      `[MaimaiClient] Done favorite on friend, friend code ${friendCode}`
+      `[MaimaiClient] Done favorite on friend, friend code ${friendCode}`,
     );
   }
 
@@ -330,7 +335,7 @@ export class MaimaiHttpClient {
   async getFriendVS(
     friendCode: string,
     scoreType: 1 | 2,
-    diff: number
+    diff: number,
   ): Promise<string> {
     const startTime = Date.now();
     const url = MAIMAI_URLS.friendVS(friendCode, scoreType, diff);
@@ -338,12 +343,12 @@ export class MaimaiHttpClient {
       url,
       { headers: DEFAULT_HEADERS },
       TIMEOUTS.friendVS,
-      true
+      true,
     );
     const text = await result.text();
     const cost = Date.now() - startTime;
     console.log(
-      `[MaimaiClient] getFriendVS friendCode=${friendCode} scoreType=${scoreType} diff=${diff} cost=${cost}ms`
+      `[MaimaiClient] getFriendVS friendCode=${friendCode} scoreType=${scoreType} diff=${diff} cost=${cost}ms`,
     );
     return text;
   }

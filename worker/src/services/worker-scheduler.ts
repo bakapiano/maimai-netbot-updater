@@ -4,7 +4,6 @@
  */
 
 import { join } from "node:path";
-import { CookieJar } from "tough-cookie";
 
 import type { Job } from "../types/index.ts";
 import { cookieStore } from "./cookie-store.ts";
@@ -12,6 +11,7 @@ import { MaimaiHttpClient } from "./maimai-client.ts";
 import { JobHandler, type JobHandlerConfig } from "./job-handler.ts";
 import { claimNextJob, updateJob } from "../job-service-client.ts";
 import { WORKER_DEFAULTS } from "../constants.ts";
+import { cleanupService } from "./cleanup-service.ts";
 
 /**
  * 从环境变量读取配置
@@ -33,7 +33,8 @@ function loadConfigFromEnv(): {
     process.env.SKIP_CLEANUP_FRIEND === "1" ||
     process.env.SKIP_CLEANUP_FRIEND?.toLowerCase() === "true";
   const heartbeatIntervalMs = Number(
-    process.env.JOB_HEARTBEAT_INTERVAL_MS ?? WORKER_DEFAULTS.heartbeatIntervalMs
+    process.env.JOB_HEARTBEAT_INTERVAL_MS ??
+      WORKER_DEFAULTS.heartbeatIntervalMs,
   );
   const dumpFriendVsHtml = process.env.DUMP_FRIEND_VS_HTML === "1";
   const friendVsHtmlDir =
@@ -68,9 +69,20 @@ export class WorkerScheduler {
   private botIndex = 0;
   private config: ReturnType<typeof loadConfigFromEnv>;
   private intervalId: NodeJS.Timeout | null = null;
+  private paused = false;
 
   constructor() {
     this.config = loadConfigFromEnv();
+
+    // 设置清理服务的回调
+    cleanupService.setCallbacks(
+      () => {
+        this.paused = true;
+      },
+      () => {
+        this.paused = false;
+      },
+    );
   }
 
   /**
@@ -83,8 +95,11 @@ export class WorkerScheduler {
 
     this.intervalId = setInterval(
       () => this.tick(),
-      this.config.tickIntervalMs
+      this.config.tickIntervalMs,
     );
+
+    // 启动清理服务
+    cleanupService.start();
 
     console.log("[WorkerScheduler] Started");
   }
@@ -96,15 +111,16 @@ export class WorkerScheduler {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log("[WorkerScheduler] Stopped");
     }
+    cleanupService.stop();
+    console.log("[WorkerScheduler] Stopped");
   }
 
   /**
    * Worker 主循环 tick
    */
   private async tick(): Promise<void> {
-    if (this.processingCount >= this.config.maxProcessJobs) {
+    if (this.paused || this.processingCount >= this.config.maxProcessJobs) {
       return;
     }
 

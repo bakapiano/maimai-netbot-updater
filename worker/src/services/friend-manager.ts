@@ -29,7 +29,7 @@ export class FriendManager {
 
     if (sentCodes.includes(friendCode)) {
       console.log(
-        `[FriendManager] Cleanup: canceling pending request for ${friendCode}`
+        `[FriendManager] Cleanup: canceling pending request for ${friendCode}`,
       );
       try {
         await this.client.cancelFriendRequest(friendCode);
@@ -68,7 +68,7 @@ export class FriendManager {
     const pending = await this.client.getAcceptRequests();
     if (pending.includes(friendCode)) {
       console.log(
-        `[FriendManager] Friend request pending approval, accepting...`
+        `[FriendManager] Friend request pending approval, accepting...`,
       );
       await this.client.allowFriendRequest(friendCode);
       return true;
@@ -89,6 +89,13 @@ export class FriendManager {
    */
   async getSentRequests() {
     return this.client.getSentRequests();
+  }
+
+  /**
+   * 取消好友请求
+   */
+  async cancelFriendRequest(friendCode: string): Promise<void> {
+    await this.client.cancelFriendRequest(friendCode);
   }
 
   /**

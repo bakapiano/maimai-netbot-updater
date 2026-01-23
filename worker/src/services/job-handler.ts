@@ -152,6 +152,18 @@ export class JobHandler {
     } else {
       const elapsed = Date.now() - this.job.createdAt.getTime();
       if (elapsed > TIMEOUTS.friendAcceptWait) {
+        // 超时时取消好友请求
+        try {
+          await this.friendManager.cancelFriendRequest(this.job.friendCode);
+          console.log(
+            `[JobHandler] Job ${this.job.id}: Cancelled friend request due to timeout`,
+          );
+        } catch (cancelErr) {
+          console.warn(
+            `[JobHandler] Job ${this.job.id}: Failed to cancel friend request:`,
+            cancelErr,
+          );
+        }
         throw new Error("等待好友接受请求超时");
       }
 

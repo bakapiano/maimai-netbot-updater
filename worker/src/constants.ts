@@ -43,7 +43,7 @@ export const MAIMAI_URLS = {
   friendFavoriteOn: `${MAIMAI_BASE_URL}/friend/favoriteOn/`,
   friendSearch: (code: string) =>
     `${MAIMAI_BASE_URL}/friend/search/searchUser/?friendCode=${encodeURIComponent(
-      code
+      code,
     )}`,
   friendSearchInvite: `${MAIMAI_BASE_URL}/friend/search/invite/`,
   friendVS: (code: string, scoreType: number, diff: number) =>
@@ -103,6 +103,8 @@ export const WORKER_DEFAULTS = {
   tickIntervalMs: 5 * 1000,
   /** Friend VS 并发数 */
   friendVSConcurrency: 2,
+  /** 清理任务间隔 (ms) - 默认 5 分钟 */
+  cleanupIntervalMs: 5 * 60 * 1000,
 } as const;
 
 // ============================================================================

@@ -81,7 +81,7 @@ export function getJobServiceBaseUrl(): string {
  * 领取下一个待处理的任务
  */
 export async function claimNextJob(
-  botUserFriendCode?: string
+  botUserFriendCode?: string,
 ): Promise<Job | null> {
   const response = await fetch(buildUrl("/api/job/next"), {
     method: "POST",
@@ -96,7 +96,7 @@ export async function claimNextJob(
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(
-      `Failed to claim next job. Status: ${response.status}. Body: ${text}`
+      `Failed to claim next job. Status: ${response.status}. Body: ${text}`,
     );
   }
 
@@ -110,7 +110,7 @@ export async function claimNextJob(
 export async function updateJob(
   jobId: string,
   patch: JobPatch,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<Job> {
   const response = await fetch(buildUrl(`/api/job/${jobId}`), {
     method: "PATCH",
@@ -122,7 +122,7 @@ export async function updateJob(
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(
-      `Failed to update job ${jobId}. Status: ${response.status}. Body: ${text}`
+      `Failed to update job ${jobId}. Status: ${response.status}. Body: ${text}`,
     );
   }
 
@@ -138,10 +138,29 @@ export async function getJob(jobId: string): Promise<Job> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(
-      `Failed to fetch job ${jobId}. Status: ${response.status}. Body: ${text}`
+      `Failed to fetch job ${jobId}. Status: ${response.status}. Body: ${text}`,
     );
   }
 
   const payload = (await response.json()) as JobResponse;
   return deserializeJob(payload);
+}
+
+/**
+ * 获取 bot 当前处理中的活跃 friendCode 列表
+ */
+export async function getActiveFriendCodes(
+  botUserFriendCode: string,
+): Promise<string[]> {
+  const response = await fetch(
+    buildUrl(`/api/job/active/${encodeURIComponent(botUserFriendCode)}`),
+  );
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch active friend codes. Status: ${response.status}. Body: ${text}`,
+    );
+  }
+
+  return (await response.json()) as string[];
 }

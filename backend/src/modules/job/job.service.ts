@@ -302,6 +302,20 @@ export class JobService {
     return toJobResponse(updated.toObject() as JobEntity);
   }
 
+  async getActiveFriendCodesByBot(
+    botUserFriendCode: string,
+  ): Promise<string[]> {
+    const jobs = await this.jobModel
+      .find({
+        botUserFriendCode,
+        status: { $nin: ['completed', 'failed', 'canceled'] },
+      })
+      .select('friendCode')
+      .lean();
+
+    return jobs.map((job) => job.friendCode);
+  }
+
   async getRecentStats(): Promise<RecentJobStats> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 

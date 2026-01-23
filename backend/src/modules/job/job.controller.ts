@@ -44,6 +44,13 @@ export class JobController {
     return this.jobs.getRecentStats();
   }
 
+  @Get('active/:botUserFriendCode')
+  async getActiveFriendCodes(
+    @Param('botUserFriendCode') botUserFriendCode: string,
+  ) {
+    return this.jobs.getActiveFriendCodesByBot(botUserFriendCode);
+  }
+
   @Get(':jobId')
   async get(@Param('jobId') jobId: string) {
     return this.jobs.get(jobId);

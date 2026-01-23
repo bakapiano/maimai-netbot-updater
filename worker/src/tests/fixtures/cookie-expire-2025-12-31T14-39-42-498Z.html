@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=yes" />
+	<script>
+		var baseW = 768;
+		var iOSW = 0;
+		var ua = navigator.userAgent.toLowerCase();
+		var isiOS = (ua.indexOf("iphone") > -1) || (ua.indexOf("ipod") > -1) || (ua.indexOf("ipad") > -1);
+		if(isiOS){
+			iOSW = document.documentElement.clientWidth;
+		}
+		window.addEventListener("resize", updateMetaViewport, false);
+		window.addEventListener("orientationchange", updateMetaViewport, false);
+		var ev = document.createEvent("UIEvent");
+		ev.initEvent("resize", true, true)
+		window.dispatchEvent(ev);
+		function updateMetaViewport(){
+			var viewportContent;
+			var w = window.outerWidth;
+			if(isiOS){
+				w = iOSW;
+			}
+			if(w < baseW){
+				viewportContent = "width=480,initial-scale=" + w/480 + ",user-scalable=yes,shrink-to-fit=no";
+			}else{
+				viewportContent = "width=device-width,initial-scale=1.0,user-scalable=yes,shrink-to-fit=no";
+			}
+			document.querySelector("meta[name='viewport']").setAttribute("content", viewportContent);
+		}
+	</script>
+	<meta name="format-detection" content="telephone=no">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE8; IE=EmulateIE9" />
+	<meta http-equiv="Pragma" CONTENT="no-cache">
+	<meta http-equiv="Cache-Control" CONTENT="no-cache">
+	<meta http-equiv="Expires" CONTENT="-1">
+	<meta name="robots" content="INDEX, FOLLOW" />
+	<meta name="author" content="(C) SEGA">
+	<meta name="copyright" content="&copy;SEGA">
+	<meta name="description" content="此网页可浏览SEGA(世嘉)音乐机台「舞萌DX」的个人游戏记录。">
+	<meta name="keywords" content="舞萌DX,maimai DX,maimai deluxe,sega" />
+	<meta name="theme-color" content="#51bcf3">
+	<meta name="mkd" content="">
+
+	<title>舞萌DX－错误－</title>
+	<link rel="stylesheet" href="https://maimai.wahlap.com/maimai-mobile/css/modaal.min.css" />
+	<link rel="stylesheet" href="https://maimai.wahlap.com/maimai-mobile/css/common.css?ver=1.50?20250117" />
+	<link rel="stylesheet" href="https://maimai.wahlap.com/maimai-mobile/css/unique.css?ver=1.50?20250117" />
+	<link rel="apple-touch-icon-precomposed" href="https://maimai.wahlap.com/maimai-mobile/apple-touch-icon.png">
+	<link rel="icon" type="image/png" href="https://maimai.wahlap.com/maimai-mobile/apple-touch-icon.png">
+<!--
+ここに百度統計のスクリプト追加予定
+-->
+</head>
+<body oncontextmenu="return false;">
+	<div class="wrapper t_c">
+				<a href="https://maimai.wahlap.com/maimai-mobile/"><img src="https://maimai.wahlap.com/maimai-mobile/img/logo.png" class="logo p_5"/></a>
+			</div>
+	<div class="wrapper main_wrapper t_c">
+		<header class="f_0">
+					</header>
+
+				
+<img src="https://maimai.wahlap.com/maimai-mobile/img/title_error.png" class="title m_10"/>
+<div class="container_red p_10">
+	<div class="p_5 f_14 ">错误码：200002</div>
+	<img src="https://maimai.wahlap.com/maimai-mobile/img/line_01.png" class="w_396" />
+	<div class="p_5 f_12 gray break">连接时间已过期。<br>请于稍后重新尝试。</div>
+	<img src="https://maimai.wahlap.com/maimai-mobile/img/chara_01.png" class="w_84 m_15"/>
+</div>
+
+		<footer class="f_0">
+			<div class="footer_marquee">
+			<div class="footer w_480">
+				<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 480 50" preserveAspectRatio="none" style="height:50px">
+					<path d="M0,0 v25 q5,5 10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 t10,0 v-25 Z" fill="#7cbc29"></path>
+				</svg>
+				<div class="m_15 m_t_0 f_13">
+					<div class="m_5"><a href="https://maimai.wahlap.com/maimai-mobile/termsOfService/" target="_blank" class="white" rel="noopener">使用条款</a></div>
+					<div class="m_5"><a href="https://maimai.wahlap.com/maimai-mobile/sitePolicy/" target="_blank" class="white" rel="noopener">使用须知</a></div>
+					<div class="m_5"><a href="https://www.segafave.co.jp/en/privacy/" target="_blank" class="white" rel="noopener">私隐政策</a></div>
+				</div>
+				<img src="https://maimai.wahlap.com/maimai-mobile/img/line_02.png" class="w_430 m_b_10" />
+				<div class="f_l m_15 m_l_30 p_l_10">
+					<a href="http://sega.jp" target="_blank" rel="noopener"><img src="https://maimai.wahlap.com/maimai-mobile/img/logo_sega.png" /></a>
+					<div class="f_15 p_5">© SEGA</div>
+				</div>
+				<div class="m_15">
+					<img src="https://maimai.wahlap.com/maimai-mobile/img/logo_wahlap.png" /></a>
+					<div class="f_11 p_3"><a href="http://www.miitbeian.gov.cn" style="text-decoration:none; color: #fff" target="_blank" rel="noopener">粤ICP备05005783号</a></div>
+				</div>
+							</div>
+			</div>
+		</footer>
+	</div>
+	<img id="page-top" src="https://maimai.wahlap.com/maimai-mobile/img/btn_page_top.png" class="pointer">
+	<img id="page-bottom" src="https://maimai.wahlap.com/maimai-mobile/img/btn_page_bottom.png" class="pointer">
+	<script src="https://maimai.wahlap.com/maimai-mobile/js/jquery-3.3.1.min.js"></script>
+	<script src="https://maimai.wahlap.com/maimai-mobile/js/modaal.min.js"></script>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-136087881-2', 'auto');
+		ga('send', 'pageview');
+
+		var scrollPoint = $('.scroll_point').length;
+		$('#page-top').click(function () {
+			if (scrollPoint > 0) {
+				var fromPos = Math.floor($(window).scrollTop());
+				var toPos   = 0;
+				$(".scroll_point").each(function() {
+					var targetPos = Math.floor($(this).offset().top);
+					if (location.pathname.split('/').pop() == "updateMusic") {
+						targetPos = targetPos - 284;
+					}
+					if (fromPos > targetPos) {
+						toPos = targetPos;
+					} else {
+						return false;
+					}
+				});
+				$('body,html').animate({scrollTop: toPos}, 500);
+			} else {
+				$('body,html').animate({scrollTop: 0}, 500);
+			}
+			return false;
+		});
+		$('#page-bottom').click(function () {
+			if (scrollPoint > 0) {
+				var fromPos = Math.floor($(window).scrollTop()) + 3;
+				var toPos   = Math.floor($(document).height());
+				$(".scroll_point").each(function() {
+					var targetPos = Math.floor($(this).offset().top);
+					if (location.pathname.split('/').pop() == "updateMusic") {
+						targetPos = targetPos - 284;
+					}
+					if (fromPos < targetPos) {
+						toPos = targetPos;
+						return false;
+					}
+				});
+				$('body,html').animate({scrollTop: toPos}, 500);
+			} else {
+				$('body,html').animate({scrollTop: $(document).height()}, 500);
+			}
+			return false;
+		});
+		function fadeOutPageBtn() {
+			$('#page-top').fadeOut(1500).animate({duration: 'slow', easing: 'linear'});
+			$('#page-bottom').fadeOut(1500).animate({duration: 'slow', easing: 'linear'});
+		}
+				var timeLimit = 3*1000;
+		var timerId = setTimeout(fadeOutPageBtn, timeLimit);
+		$(window).scroll(function() {
+			if (!spmenu_navigation.is(':visible')) spmenu_navigation.css('display', 'block');
+			if (!$('#page-top').is(':visible')) $('#page-top').fadeIn();
+			if (!$('#page-bottom').is(':visible')) $('#page-bottom').fadeIn();
+			clearTimeout(timerId);
+			timerId = setTimeout(fadeOutPageBtn, timeLimit);
+					});
+	</script>
+	</body>
+</html>
