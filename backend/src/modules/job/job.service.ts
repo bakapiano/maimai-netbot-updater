@@ -48,6 +48,7 @@ function toJobResponse(job: JobEntity): JobResponse {
     updateScoreDuration: job.updateScoreDuration ?? null,
     error: job.error ?? null,
     executing: job.executing,
+    pickedAt: job.pickedAt?.toISOString() ?? null,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   };
@@ -160,6 +161,7 @@ export class JobService {
           stage: 'send_request',
           executing: true,
           botUserFriendCode,
+          pickedAt: now,
           updatedAt: now,
         },
       },

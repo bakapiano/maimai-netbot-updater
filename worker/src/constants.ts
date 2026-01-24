@@ -99,7 +99,7 @@ export const WORKER_DEFAULTS = {
   /** 心跳间隔 (ms) */
   heartbeatIntervalMs: 20_000,
   /** 最大并发处理任务数 */
-  maxProcessJobs: 4,
+  maxProcessJobs: 16,
   /** Worker tick 间隔 (ms) */
   tickIntervalMs: 5 * 1000,
   /** Friend VS 并发数 */

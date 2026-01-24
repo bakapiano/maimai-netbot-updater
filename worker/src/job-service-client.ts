@@ -27,6 +27,7 @@ function buildUrl(path: string): string {
 function deserializeJob(payload: JobResponse): Job {
   return {
     ...payload,
+    pickedAt: payload.pickedAt ? new Date(payload.pickedAt) : null,
     createdAt: new Date(payload.createdAt),
     updatedAt: new Date(payload.updatedAt),
   };

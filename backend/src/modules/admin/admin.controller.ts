@@ -44,4 +44,9 @@ export class AdminController {
     const result = await this.adminService.syncMusic();
     return { ok: true, ...result };
   }
+
+  @Get('active-jobs')
+  async getActiveJobs() {
+    return await this.adminService.getActiveJobs();
+  }
 }

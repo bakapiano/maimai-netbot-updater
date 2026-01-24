@@ -57,6 +57,26 @@ export interface JobErrorStats {
   items: JobErrorStatsItem[];
 }
 
+export interface ActiveJob {
+  id: string;
+  friendCode: string;
+  skipUpdateScore: boolean;
+  status: string;
+  stage: string;
+  executing: boolean;
+  scoreProgress: { completedDiffs: number[]; totalDiffs: number } | null;
+  createdAt: string;
+  updatedAt: string;
+  pickedAt: string | null;
+  runningDuration: number; // milliseconds since createdAt
+}
+
+export interface ActiveJobsStats {
+  queuedCount: number;
+  processingCount: number;
+  jobs: ActiveJob[];
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -117,6 +137,38 @@ export class AdminService {
 
   async syncMusic() {
     return this.musicService.syncMusicData();
+  }
+
+  async getActiveJobs(): Promise<ActiveJobsStats> {
+    const now = Date.now();
+
+    const [queuedCount, processingCount, jobs] = await Promise.all([
+      this.jobModel.countDocuments({ status: 'queued' }),
+      this.jobModel.countDocuments({ status: 'processing' }),
+      this.jobModel
+        .find({ status: { $in: ['queued', 'processing'] } })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean(),
+    ]);
+
+    return {
+      queuedCount,
+      processingCount,
+      jobs: jobs.map((job) => ({
+        id: job.id,
+        friendCode: job.friendCode,
+        skipUpdateScore: job.skipUpdateScore,
+        status: job.status,
+        stage: job.stage,
+        executing: job.executing,
+        scoreProgress: job.scoreProgress,
+        createdAt: job.createdAt.toISOString(),
+        updatedAt: job.updatedAt.toISOString(),
+        pickedAt: job.pickedAt?.toISOString() ?? null,
+        runningDuration: now - job.createdAt.getTime(),
+      })),
+    };
   }
 
   async getJobStats(): Promise<JobStats> {

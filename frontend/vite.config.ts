@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3001,
     host: "127.0.0.1",
     proxy: {
-      "/api": "http://127.0.0.1:9050",
+      "/api": "https://maiscorehub.bakapiano.com",
       "/maimai-mobile/img": {
         target: "https://maimai.wahlap.com",
         changeOrigin: true,

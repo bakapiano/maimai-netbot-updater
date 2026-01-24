@@ -1,4 +1,19 @@
 import {
+  Badge,
+  Button,
+  Card,
+  Container,
+  Group,
+  Pagination,
+  PasswordInput,
+  Stack,
+  Switch,
+  Table,
+  Tabs,
+  Text,
+  Title,
+} from "@mantine/core";
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -11,21 +26,9 @@ import {
   YAxis,
 } from "recharts";
 import {
-  Button,
-  Card,
-  Container,
-  Group,
-  Pagination,
-  PasswordInput,
-  Stack,
-  Table,
-  Tabs,
-  Text,
-  Title,
-} from "@mantine/core";
-import {
   IconArrowsExchange,
   IconChartBar,
+  IconClock,
   IconDatabase,
   IconMusic,
   IconPhoto,
@@ -81,6 +84,26 @@ interface JobErrorStatsItem {
 interface JobErrorStats {
   label: string;
   items: JobErrorStatsItem[];
+}
+
+interface ActiveJob {
+  id: string;
+  friendCode: string;
+  skipUpdateScore: boolean;
+  status: string;
+  stage: string;
+  executing: boolean;
+  scoreProgress: { completedDiffs: number[]; totalDiffs: number } | null;
+  createdAt: string;
+  updatedAt: string;
+  pickedAt: string | null;
+  runningDuration: number;
+}
+
+interface ActiveJobsStats {
+  queuedCount: number;
+  processingCount: number;
+  jobs: ActiveJob[];
 }
 
 interface AdminUser {
@@ -182,6 +205,10 @@ export default function AdminPage() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(1);
   const usersPerPage = 20;
+
+  const [activeJobs, setActiveJobs] = useState<ActiveJobsStats | null>(null);
+  const [activeJobsLoading, setActiveJobsLoading] = useState(false);
+  const [autoRefreshActiveJobs, setAutoRefreshActiveJobs] = useState(true);
 
   const paginatedUsers = useMemo(() => {
     const start = (userPage - 1) * usersPerPage;
@@ -348,6 +375,19 @@ export default function AdminPage() {
     }
   }, [password]);
 
+  const loadActiveJobs = useCallback(async () => {
+    if (!password) return;
+    setActiveJobsLoading(true);
+    const res = await adminFetch<ActiveJobsStats>(
+      "/api/admin/active-jobs",
+      password,
+    );
+    setActiveJobsLoading(false);
+    if (res.ok && res.data) {
+      setActiveJobs(res.data);
+    }
+  }, [password]);
+
   // Auto verify if password is stored
   useEffect(() => {
     if (password && !verified) {
@@ -398,6 +438,22 @@ export default function AdminPage() {
       void loadDataSource();
     }
   }, [verified, dataSource, loadDataSource]);
+
+  // Load active jobs when verified
+  useEffect(() => {
+    if (verified && password && !activeJobs) {
+      void loadActiveJobs();
+    }
+  }, [verified, password, activeJobs, loadActiveJobs]);
+
+  // Auto refresh active jobs every 5 seconds
+  useEffect(() => {
+    if (!verified || !password || !autoRefreshActiveJobs) return;
+    const interval = setInterval(() => {
+      void loadActiveJobs();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [verified, password, autoRefreshActiveJobs, loadActiveJobs]);
 
   if (!verified) {
     return (
@@ -544,6 +600,128 @@ export default function AdminPage() {
               落雪 (LXNS)
             </Button>
           </Group>
+        </Card>
+
+        <Card withBorder shadow="sm" padding="lg" radius="md">
+          <Stack gap="md">
+            <Group justify="space-between" align="center">
+              <Group gap="xs">
+                <IconClock size={20} />
+                <Text fw={600}>实时任务监控</Text>
+                {activeJobs && (
+                  <Group gap="xs">
+                    <Badge color="yellow" variant="light">
+                      排队: {activeJobs.queuedCount}
+                    </Badge>
+                    <Badge color="blue" variant="light">
+                      进行中: {activeJobs.processingCount}
+                    </Badge>
+                  </Group>
+                )}
+              </Group>
+              <Group gap="xs">
+                <Switch
+                  size="xs"
+                  label="自动刷新"
+                  checked={autoRefreshActiveJobs}
+                  onChange={(e) =>
+                    setAutoRefreshActiveJobs(e.currentTarget.checked)
+                  }
+                />
+                <Button
+                  variant="light"
+                  size="xs"
+                  leftSection={<IconRefresh size={14} />}
+                  onClick={loadActiveJobs}
+                  loading={activeJobsLoading}
+                >
+                  刷新
+                </Button>
+              </Group>
+            </Group>
+
+            {activeJobs && activeJobs.jobs.length > 0 ? (
+              <Table striped highlightOnHover withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>好友码</Table.Th>
+                    <Table.Th>状态</Table.Th>
+                    <Table.Th>阶段</Table.Th>
+                    <Table.Th>进度</Table.Th>
+                    <Table.Th ta="right">运行时长</Table.Th>
+                    <Table.Th>创建时间</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {activeJobs.jobs.map((job) => (
+                    <Table.Tr key={job.id}>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace">
+                          {job.friendCode}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={
+                            job.status === "processing" ? "blue" : "yellow"
+                          }
+                          variant="light"
+                          size="sm"
+                        >
+                          {job.status === "queued"
+                            ? "排队中"
+                            : job.executing
+                              ? "执行中"
+                              : "处理中"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">
+                          {job.stage === "send_request"
+                            ? "发送请求"
+                            : job.stage === "wait_acceptance"
+                              ? "等待接受"
+                              : job.stage === "update_score"
+                                ? "更新分数"
+                                : job.stage}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        {job.scoreProgress ? (
+                          <Text size="sm">
+                            {job.scoreProgress.completedDiffs.length}/
+                            {job.scoreProgress.totalDiffs}
+                          </Text>
+                        ) : (
+                          <Text size="sm" c="dimmed">
+                            -
+                          </Text>
+                        )}
+                      </Table.Td>
+                      <Table.Td ta="right">
+                        <Text size="sm" ff="monospace">
+                          {Math.floor(job.runningDuration / 1000)}s
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {new Date(job.createdAt).toLocaleTimeString("zh-CN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            ) : (
+              <Text size="sm" c="dimmed" ta="center">
+                {activeJobsLoading ? "加载中..." : "当前没有进行中的任务"}
+              </Text>
+            )}
+          </Stack>
         </Card>
 
         <Card withBorder shadow="sm" padding="lg" radius="md">

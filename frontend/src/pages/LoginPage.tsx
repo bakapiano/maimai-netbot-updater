@@ -83,7 +83,7 @@ export default function LoginPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [jobStage, setJobStage] = useState("");
   const [friendRequestSentAt, setFriendRequestSentAt] = useState("");
-  const [jobCreatedAd, setJobCreatedAt] = useState<string | null>(null);
+  const [jobPickedAt, setJobPickedAt] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
   const totalWaitSeconds = 3 * 60;
@@ -146,8 +146,8 @@ export default function LoginPage() {
       const sentAt = (res.data as any)?.job?.friendRequestSentAt;
       if (sentAt) setFriendRequestSentAt(sentAt);
 
-      const createdAt = (res.data as any)?.job?.createdAt;
-      if (createdAt) setJobCreatedAt(createdAt);
+      const pickedAt = (res.data as any)?.job?.pickedAt;
+      if (pickedAt) setJobPickedAt(pickedAt);
 
       const profileFromStatus =
         (res.data as LoginStatus)?.profile ??
@@ -188,21 +188,21 @@ export default function LoginPage() {
   }, [jobId, polling, setToken, navigate]);
 
   useEffect(() => {
-    if (jobStage !== "wait_acceptance" || !jobCreatedAd) {
+    if (jobStage !== "wait_acceptance" || !jobPickedAt) {
       if (timeLeft !== 0) setTimeLeft(0);
       return;
     }
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const created = new Date(jobCreatedAd).getTime();
-      const end = created + totalWaitSeconds * 1000;
+      const picked = new Date(jobPickedAt).getTime();
+      const end = picked + totalWaitSeconds * 1000;
       const left = Math.max(0, Math.ceil((end - now) / 1000));
       setTimeLeft(left);
     }, 500);
 
     return () => clearInterval(interval);
-  }, [jobStage, jobCreatedAd]);
+  }, [jobStage, jobPickedAt]);
 
   const startLogin = async () => {
     setLoading(true);
@@ -212,7 +212,7 @@ export default function LoginPage() {
     setProfile(null);
     setJobStage("");
     setFriendRequestSentAt("");
-    setJobCreatedAt(null);
+    setJobPickedAt(null);
     setTimeLeft(0);
 
     const trimmedCode = friendCode.trim();

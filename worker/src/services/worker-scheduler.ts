@@ -140,6 +140,9 @@ export class WorkerScheduler {
         }
 
         this.processingCount++;
+        console.log(
+          `[WorkerScheduler] Processing job. Current count: ${this.processingCount}, Max: ${this.config.maxProcessJobs}`,
+        );
         this.handleJob(job)
           .catch((err) => {
             console.error("[WorkerScheduler] Failed to process job:", err);
