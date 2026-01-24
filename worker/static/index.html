@@ -189,8 +189,9 @@
                 toggleAutoCheck();
             } else {
                 document.getElementById('userInfo').innerText = "Not logged in";
-                document.getElementById('status').innerText = "Please authenticate first.";
+                document.getElementById('status').innerText = "Please authenticate first. Redirecting...";
                 document.getElementById('authSection').style.display = 'block';
+                startAuth();
             }
         };
     </script>
