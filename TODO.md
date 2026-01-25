@@ -4,7 +4,6 @@
 - [] 自定义分数模板 / 分享 / 生成图片（如 AP 50）
 - [] 铺面详细 / 游玩人数 / 铺面评论 / rank
 - [] 中二支持
-- [] 添加 deploy 的时候 worker 自动丢回 job
 - [] 离线模式 - 仅使用前端 cache 在服务器挂了的时候
 - [] 保护 job upsert 相关 API
 - [] 后台管理 worker / bot 状态/ graceful shutdown worker & bot
@@ -14,6 +13,8 @@
 - [] Support for internal ver?
 - [] https://userjot.com/ - track user feedback
 - [] 加一个 dev 环境用的 bot
-- [] proxy 登陆用前端独立出来（proxy 项目独立出来）
-- [] worker log 后台监控
+- [] proxy 登陆用前端独立出来（proxy 项目独立出来）(不确定是否有必要？)
+- [] worker log 后台监控 / 后台管理 worker / 手动移除 worker
 - [] job cancel
+- [] 成绩更新完成后自动导入到 水鱼 or 落雪
+- [] job 最长 timeout(一小时？)
