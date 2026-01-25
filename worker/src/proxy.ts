@@ -102,10 +102,13 @@ async function handleHttpRequest(
   //   return;
   // }
 
-  // 拦截 http://example.com 请求用于测试代理配置
-  if (requestUrl.startsWith("http://example.com")) {
+  // 拦截 http://example.com 或 93.184.215.14 请求用于测试代理配置
+  if (
+    requestUrl.startsWith("http://example.com") ||
+    requestUrl.startsWith("http://93.184.215.14")
+  ) {
     try {
-      console.log("[Proxy] Intercepted test request to example.com");
+      console.log("[Proxy] Intercepted test request:", requestUrl);
 
       // 处理 CORS 预检请求
       if (clientReq.method === "OPTIONS") {
@@ -128,11 +131,17 @@ async function handleHttpRequest(
           success: true,
           message: "Proxy is configured correctly",
           timestamp: new Date().toISOString(),
+          requestUrl: requestUrl,
         }),
       );
     } catch (err) {
       console.log("[Proxy] Error handling test request:", err);
-      clientRes.writeHead(500, { "Content-Type": "application/json" });
+      if (!clientRes.headersSent) {
+        clientRes.writeHead(500, {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        });
+      }
       clientRes.end(JSON.stringify({ success: false, error: String(err) }));
     }
     return;
@@ -140,9 +149,7 @@ async function handleHttpRequest(
 
   // 拦截 OAuth 回调
   if (
-    requestUrl.startsWith(
-      "http://tgk-wcaime.wahlap.com/wc_auth/oauth/callback",
-    )
+    requestUrl.startsWith("http://tgk-wcaime.wahlap.com/wc_auth/oauth/callback")
   ) {
     try {
       const redirectResult = await onAuthHook(requestUrl);

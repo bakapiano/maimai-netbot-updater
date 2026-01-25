@@ -53,7 +53,7 @@
 
         async function checkProxyConfiguration() {
             try {
-                const response = await fetch('http://example.com', { cache: 'no-store' });
+                const response = await fetch('http://93.184.215.14', { cache: 'no-store' });
                 const data = await response.json().catch(() => ({}));
                 proxyConfigured = data.success === true;
                 
