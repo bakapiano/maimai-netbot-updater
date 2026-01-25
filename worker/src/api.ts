@@ -3,13 +3,13 @@
  * 提供 REST API 接口
  */
 
+import { GameType, getAuthUrl } from "./services/index.ts";
+
+import config from "./config.ts";
+import { cookieStore } from "./state.ts";
 import express from "express";
 import { fileURLToPath } from "url";
 import path from "path";
-
-import config from "./config.ts";
-import { getAuthUrl, GameType } from "./services/index.ts";
-import { cookieStore } from "./state.ts";
 import { testCookieExpired } from "./cookie.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,7 +38,7 @@ app.get("/", (_req, res) => {
 app.get("/api/auth", async (_req, res) => {
   try {
     const href = await getAuthUrl(GameType.maimai);
-    console.log(href)
+    console.log(href);
     res.json({ authUrl: href });
   } catch (err) {
     console.error(err);

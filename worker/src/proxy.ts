@@ -101,6 +101,29 @@ async function handleHttpRequest(
   //   return;
   // }
 
+  // 拦截 http://example.com 请求用于测试代理配置
+  if (reqUrl.href && reqUrl.href.startsWith("http://example.com")) {
+    try {
+      console.log("[Proxy] Intercepted test request to example.com");
+      clientRes.writeHead(200, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      });
+      clientRes.end(
+        JSON.stringify({
+          success: true,
+          message: "Proxy is configured correctly",
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    } catch (err) {
+      console.log("[Proxy] Error handling test request:", err);
+      clientRes.writeHead(500, { "Content-Type": "application/json" });
+      clientRes.end(JSON.stringify({ success: false, error: String(err) }));
+    }
+    return;
+  }
+
   // 拦截 OAuth 回调
   if (
     reqUrl.href &&

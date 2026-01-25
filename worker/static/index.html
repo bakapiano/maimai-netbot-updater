@@ -9,15 +9,88 @@
         .section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 4px; }
         pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
         .row { margin-bottom: 1rem; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-healthy { background-color: #4caf50; }
+        .status-unhealthy { background-color: #f44336; }
+        .status-checking { background-color: #ff9800; }
+        .status-row { margin: 0.5rem 0; }
     </style>
     <script>
         let checkInterval;
+        let statusCheckInterval;
         let currentUserFriendCode = null;
         let redirecting = false;
         let jobServiceBase = "";
         const healthRetryDelay = 2000;
+        let backendHealthy = false;
+        let proxyConfigured = false;
 
         const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        async function checkBackendHealth() {
+            try {
+                const response = await fetch('/api/health', { 
+                    cache: 'no-store'
+                });
+                backendHealthy = response.ok;
+                
+                const indicator = document.getElementById('backendHealthIndicator');
+                const status = document.getElementById('backendHealthStatus');
+                
+                if (backendHealthy) {
+                    indicator.className = 'status-indicator status-healthy';
+                    status.innerText = 'Healthy - Worker service running';
+                } else {
+                    indicator.className = 'status-indicator status-unhealthy';
+                    status.innerText = `Unhealthy - Status ${response.status}`;
+                }
+            } catch (err) {
+                backendHealthy = false;
+                document.getElementById('backendHealthIndicator').className = 'status-indicator status-unhealthy';
+                document.getElementById('backendHealthStatus').innerText = 'Error: ' + err.message;
+            }
+        }
+
+        async function checkProxyConfiguration() {
+            try {
+                const response = await fetch('http://example.com', { cache: 'no-store' });
+                const data = await response.json().catch(() => ({}));
+                proxyConfigured = data.success === true;
+                
+                const indicator = document.getElementById('proxyConfigIndicator');
+                const status = document.getElementById('proxyConfigStatus');
+                
+                if (proxyConfigured) {
+                    indicator.className = 'status-indicator status-healthy';
+                    status.innerText = `Configured - ${data.message || 'Working'}`;
+                } else {
+                    indicator.className = 'status-indicator status-unhealthy';
+                    status.innerText = 'Not configured - No response from proxy';
+                }
+            } catch (err) {
+                proxyConfigured = false;
+                document.getElementById('proxyConfigIndicator').className = 'status-indicator status-unhealthy';
+                document.getElementById('proxyConfigStatus').innerText = 'Error: ' + err.message;
+            }
+        }
+
+        async function checkSystemStatus() {
+            await Promise.all([checkBackendHealth(), checkProxyConfiguration()]);
+        }
+
+        function startStatusChecking() {
+            checkSystemStatus();
+            if (!statusCheckInterval) {
+                statusCheckInterval = setInterval(checkSystemStatus, 5000);
+            }
+        }
+
+        function stopStatusChecking() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        }
 
         async function resolveJobServiceBase() {
             if (jobServiceBase) {
@@ -65,6 +138,12 @@
         }
 
         async function startAuth() {
+            // 检查后端健康状态和代理配置
+            if (!backendHealthy || !proxyConfigured) {
+                document.getElementById('status').innerText = "Cannot start auth: Backend or proxy not ready";
+                return;
+            }
+
             try {
                 await waitForHealth();
                 const response = await fetch('/api/auth');
@@ -183,21 +262,43 @@
         window.onload = () => {
             currentUserFriendCode = getQueryParam('friendCode');
             
+            // 开始系统状态检查
+            startStatusChecking();
+            
             if (currentUserFriendCode) {
                 document.getElementById('userInfo').innerText = `Logged in as: ${currentUserFriendCode}`;
                 document.getElementById('authSection').style.display = 'none';
                 toggleAutoCheck();
             } else {
                 document.getElementById('userInfo').innerText = "Not logged in";
-                document.getElementById('status').innerText = "Please authenticate first. Redirecting...";
+                document.getElementById('status').innerText = "Please authenticate first. Waiting for backend and proxy...";
                 document.getElementById('authSection').style.display = 'block';
-                startAuth();
+                
+                // 等待后端和代理就绪后再自动开始认证
+                const waitForReady = setInterval(() => {
+                    if (backendHealthy && proxyConfigured) {
+                        clearInterval(waitForReady);
+                        startAuth();
+                    }
+                }, 1000);
             }
         };
     </script>
 </head>
 <body>
     <h1>Maimai Cookie Manager</h1>
+    
+    <div class="section">
+        <h2>System Status</h2>
+        <div class="status-row">
+            <span class="status-indicator status-checking" id="backendHealthIndicator"></span>
+            <strong>Backend Health:</strong> <span id="backendHealthStatus">Checking...</span>
+        </div>
+        <div class="status-row">
+            <span class="status-indicator status-checking" id="proxyConfigIndicator"></span>
+            <strong>Proxy Configuration:</strong> <span id="proxyConfigStatus">Checking...</span>
+        </div>
+    </div>
     
     <div class="section">
         <h2>User Info</h2>
