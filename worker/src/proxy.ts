@@ -105,6 +105,19 @@ async function handleHttpRequest(
   if (reqUrl.href && reqUrl.href.startsWith("http://example.com")) {
     try {
       console.log("[Proxy] Intercepted test request to example.com");
+
+      // 处理 CORS 预检请求
+      if (clientReq.method === "OPTIONS") {
+        clientRes.writeHead(200, {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400",
+        });
+        clientRes.end();
+        return;
+      }
+
       clientRes.writeHead(200, {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -260,7 +273,15 @@ proxyServer.on("clientError", (err, clientSocket) => {
     : "<no rawPacket>";
   console.log("[Proxy] Client error: " + err);
   console.log("[Proxy] Client error raw: " + rawPreview);
-  (clientSocket as net.Socket).end("HTTP/1.1 400 Bad Request\r\n\r\n");
+
+  // 检查 socket 是否可写，避免在已关闭的 socket 上写入
+  if (!clientSocket.destroyed && clientSocket.writable) {
+    try {
+      (clientSocket as net.Socket).end("HTTP/1.1 400 Bad Request\r\n\r\n");
+    } catch (e) {
+      console.log("[Proxy] Failed to send error response:", e);
+    }
+  }
 });
 
 export { proxyServer as proxy };
