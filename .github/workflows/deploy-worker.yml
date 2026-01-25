@@ -8,21 +8,26 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-worker
+  group: deploy-worker-${{ matrix.instance }}
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        instance: [1, 2] # 添加更多实例编号
+      fail-fast: false # 一个失败不影响其他部署
+      max-parallel: 3 # 同时部署的最大数量
     steps:
-      - name: Deploy via SSH
+      - name: Deploy to Worker Instance ${{ matrix.instance }}
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.WORKER_HOST }}
-          username: ${{ secrets.WORKER_USER }}
+          host: ${{ secrets[format('WORKER_{0}_HOST', matrix.instance)] }}
+          username: ${{ secrets[format('WORKER_{0}_USER', matrix.instance)] }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd ${{ secrets.WORKER_PATH }}
+            cd ${{ secrets[format('WORKER_{0}_PATH', matrix.instance)] }}
             sudo chown -R "$USER:$USER" "$(pwd)" || true
             git config --global --add safe.directory "$(pwd)"
             git fetch --all
@@ -35,11 +40,11 @@ jobs:
             fi
             for i in 1 2 3 4 5; do
               if curl -fsS http://localhost:3999/api/health; then
-                echo "Health check passed"
+                echo "Health check passed on instance ${{ matrix.instance }}"
                 exit 0
               fi
               echo "Attempt $i failed, retrying in 5 seconds..."
               sleep 5
             done
-            echo "Health check failed after 5 attempts"
+            echo "Health check failed after 5 attempts on instance ${{ matrix.instance }}"
             exit 1

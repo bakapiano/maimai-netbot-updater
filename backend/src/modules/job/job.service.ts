@@ -8,6 +8,7 @@ import type { Model } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 import { SyncService } from '../sync/sync.service';
+import { JobTempCacheService } from './job-temp-cache.service';
 import type {
   JobPatchBody,
   JobResponse,
@@ -25,7 +26,7 @@ export interface RecentJobStats {
 }
 
 const DEAD_JOB_TIMEOUT_MS = Number(
-  process.env.DEAD_JOB_TIMEOUT_MS ?? 1 * 60 * 1000,
+  process.env.DEAD_JOB_TIMEOUT_MS ?? 1 * 30 * 1000,
 );
 
 // [TODO] Change this to 1min
@@ -42,7 +43,7 @@ function toJobResponse(job: JobEntity): JobResponse {
     friendRequestSentAt: job.friendRequestSentAt ?? null,
     status: job.status,
     stage: job.stage,
-    result: job.result,
+    // result: job.result,
     profile: job.profile,
     scoreProgress: job.scoreProgress ?? null,
     updateScoreDuration: job.updateScoreDuration ?? null,
@@ -74,6 +75,7 @@ export class JobService {
     @InjectModel(JobEntity.name)
     private readonly jobModel: Model<JobEntity>,
     private readonly syncService: SyncService,
+    private readonly tempCacheService: JobTempCacheService,
   ) {}
 
   async create(input: { friendCode: string; skipUpdateScore: boolean }) {
@@ -291,6 +293,15 @@ export class JobService {
 
     if (!updated) {
       throw new NotFoundException('Job not found');
+    }
+
+    // 当 job 完成、失败或取消时，清理临时缓存
+    const finalStatuses: JobStatus[] = ['completed', 'failed', 'canceled'];
+    if (finalStatuses.includes(updated.status)) {
+      // 异步清理缓存，不阻塞响应
+      this.tempCacheService.deleteByJobId(jobId).catch((err) => {
+        console.error(`Failed to delete temp cache for job ${jobId}:`, err);
+      });
     }
 
     if (

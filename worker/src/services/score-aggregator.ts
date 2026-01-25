@@ -9,15 +9,18 @@ import type {
   ParsedScoreResult,
 } from "../types/index.ts";
 import { DIFFICULTIES, WORKER_DEFAULTS } from "../constants.ts";
+import { getCachedHtml, setCachedHtml } from "../job-temp-cache-client.ts";
 
 import { MaimaiHttpClient } from "./maimai-client.ts";
 import { parseFriendVsSongs } from "../parsers/index.ts";
 
 export interface ScoreFetchOptions {
+  /** Job ID（用于缓存恢复） */
+  jobId?: string;
   /** 是否导出 HTML（调试用） */
   dumpHtml?: (
     html: string,
-    meta: { type: number; diff: number }
+    meta: { type: number; diff: number },
   ) => Promise<void>;
   /** 并发数 */
   concurrency?: number;
@@ -40,9 +43,10 @@ export class ScoreAggregator {
    */
   async fetchAndAggregate(
     friendCode: string,
-    options: ScoreFetchOptions = {}
+    options: ScoreFetchOptions = {},
   ): Promise<AggregatedScoreResult> {
     const {
+      jobId,
       dumpHtml,
       concurrency = WORKER_DEFAULTS.friendVSConcurrency,
       onDiffCompleted,
@@ -68,14 +72,30 @@ export class ScoreAggregator {
     for (const diff of DIFFICULTIES) {
       // scoreType 1 = dxScore
       tasks.push(async () => {
-        const result = await this.client.getFriendVS(friendCode, 1, diff);
+        let html: string | null = null;
+
+        // 如果有 jobId，先尝试从缓存获取
+        if (jobId) {
+          html = await getCachedHtml(jobId, diff, 1);
+        }
+
+        // 缓存未命中，调用网络
+        if (!html) {
+          html = await this.client.getFriendVS(friendCode, 1, diff);
+
+          // 保存到缓存
+          if (jobId) {
+            await setCachedHtml(jobId, diff, 1, html);
+          }
+        }
+
         if (dumpHtml) {
-          await dumpHtml(result, { type: 1, diff });
+          await dumpHtml(html, { type: 1, diff });
         }
         const parsed = {
           diff,
           type: 1 as const,
-          songs: parseFriendVsSongs(result),
+          songs: parseFriendVsSongs(html),
         };
         await notifyDiffCompleted(diff);
         return parsed;
@@ -83,14 +103,30 @@ export class ScoreAggregator {
 
       // scoreType 2 = score (达成率)
       tasks.push(async () => {
-        const result = await this.client.getFriendVS(friendCode, 2, diff);
+        let html: string | null = null;
+
+        // 如果有 jobId，先尝试从缓存获取
+        if (jobId) {
+          html = await getCachedHtml(jobId, diff, 2);
+        }
+
+        // 缓存未命中，调用网络
+        if (!html) {
+          html = await this.client.getFriendVS(friendCode, 2, diff);
+
+          // 保存到缓存
+          if (jobId) {
+            await setCachedHtml(jobId, diff, 2, html);
+          }
+        }
+
         if (dumpHtml) {
-          await dumpHtml(result, { type: 2, diff });
+          await dumpHtml(html, { type: 2, diff });
         }
         const parsed = {
           diff,
           type: 2 as const,
-          songs: parseFriendVsSongs(result),
+          songs: parseFriendVsSongs(html),
         };
         await notifyDiffCompleted(diff);
         return parsed;
@@ -105,7 +141,7 @@ export class ScoreAggregator {
    * 聚合多个难度的成绩结果
    */
   private aggregateResults(
-    results: ParsedScoreResult[]
+    results: ParsedScoreResult[],
   ): AggregatedScoreResult {
     const aggregated: AggregatedScoreResult = {};
 
@@ -155,7 +191,7 @@ export class ScoreAggregator {
  */
 async function runWithConcurrency<T>(
   tasks: Array<() => Promise<T>>,
-  limit: number
+  limit: number,
 ): Promise<T[]> {
   const results: T[] = new Array(tasks.length);
   let next = 0;

@@ -45,6 +45,8 @@ type JobStatus = {
     totalDiffs: number;
   } | null;
   updatedAt: string;
+  friendRequestSentAt?: string;
+  pickedAt?: string;
 };
 
 const DIFFICULTY_NAMES: Record<number, string> = {
@@ -102,6 +104,13 @@ export default function SyncPage() {
   const [syncStatus, setSyncStatus] = useState<JobStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  const totalWaitSeconds = 5 * 60;
+  const remainingPercent = Math.min(
+    100,
+    Math.max(0, (timeLeft / totalWaitSeconds) * 100),
+  );
 
   // Export state
   const [exportLoading, setExportLoading] = useState<
@@ -166,6 +175,32 @@ export default function SyncPage() {
         setProfile(res.data);
         setDivingFishToken(res.data.divingFishImportToken ?? "");
         setLxnsToken(res.data.lxnsImportToken ?? "");
+
+        // Check for active job after getting friendCode
+        if (res.data.friendCode) {
+          const activeJobRes = await fetchJson<{ job: JobStatus | null }>(
+            `/api/job/by-friend-code/${res.data.friendCode}/active`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+
+          if (cancelled) return;
+
+          if (activeJobRes.ok && activeJobRes.data?.job) {
+            // Found an active job, restore the state
+            const activeJob = activeJobRes.data.job;
+            setSyncJobId(activeJob.id);
+            setSyncStatus(activeJob);
+            // Only set syncing to true if it's still in progress
+            if (
+              activeJob.status === "queued" ||
+              activeJob.status === "processing"
+            ) {
+              setSyncing(true);
+            }
+          }
+        }
       } else {
         setProfileError(`加载失败 (HTTP ${res.status})`);
       }
@@ -246,6 +281,28 @@ export default function SyncPage() {
 
     return () => clearInterval(interval);
   }, [syncJobId, syncing, loadProfile, loadLastSync]);
+
+  // Handle timeout countdown for wait_acceptance stage
+  useEffect(() => {
+    if (
+      !syncStatus ||
+      syncStatus.stage !== "wait_acceptance" ||
+      !syncStatus.pickedAt
+    ) {
+      if (timeLeft !== 0) setTimeLeft(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const picked = new Date(syncStatus.pickedAt!).getTime();
+      const end = picked + totalWaitSeconds * 1000;
+      const left = Math.max(0, Math.ceil((end - now) / 1000));
+      setTimeLeft(left);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [syncStatus?.stage, syncStatus?.pickedAt]);
 
   // Start sync
   const startSync = async () => {
@@ -426,7 +483,7 @@ export default function SyncPage() {
                   <Text size="xs" c="dimmed">
                     记录条数
                   </Text>
-                  <Badge variant="light" size="lg">
+                  <Badge variant="light" size="lg" radius="md">
                     {lastSync.scores.length} 条
                   </Badge>
                 </Stack>
@@ -563,6 +620,7 @@ export default function SyncPage() {
                     <Group gap="xs" mt={4}>
                       {progress.completedDiffs.map((diff) => (
                         <Badge
+                          radius={"md"}
                           key={diff}
                           size="sm"
                           variant="filled"
@@ -597,8 +655,24 @@ export default function SyncPage() {
                 >
                   <Stack gap="sm">
                     <Text size="sm">
-                      Bot 已发送好友申请，请登录 NET 并同意好友申请。
+                      Bot 已发送好友申请，请登录 NET
+                      并在核对时间一致后同意好友申请。
                     </Text>
+                    {syncStatus.friendRequestSentAt && (
+                      <Text size="sm" c="red" fw={700}>
+                        若申请时间不是 {syncStatus.friendRequestSentAt}
+                        ，请勿接受，可能是他人尝试登录！
+                      </Text>
+                    )}
+                    <Progress.Root size="xl" mt={4}>
+                      <Progress.Section
+                        animated
+                        value={remainingPercent}
+                        title={`${timeLeft} 秒后过期`}
+                      >
+                        <Progress.Label>{timeLeft} 秒后过期</Progress.Label>
+                      </Progress.Section>
+                    </Progress.Root>
                   </Stack>
                 </Alert>
               )}

@@ -47,7 +47,7 @@ export interface JobResponse {
   friendRequestSentAt?: string | null;
   status: JobStatus;
   stage: JobStage;
-  result?: any;
+  // result?: any;
   profile?: UserProfile;
   error?: string | null;
   executing?: boolean;

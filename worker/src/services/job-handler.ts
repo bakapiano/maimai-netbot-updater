@@ -255,6 +255,7 @@ export class JobHandler {
       aggregated = await this.scoreAggregator.fetchAndAggregate(
         this.job.friendCode,
         {
+          jobId: this.job.id,
           dumpHtml: this.config.dumpFriendVsHtml
             ? (html, meta) => this.dumpFriendVsHtml(html, meta)
             : undefined,

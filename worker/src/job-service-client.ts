@@ -20,7 +20,7 @@ function ensureBaseUrl(): string {
   return baseUrl;
 }
 
-function buildUrl(path: string): string {
+export function buildUrl(path: string): string {
   return `${ensureBaseUrl()}${path}`;
 }
 
@@ -62,6 +62,9 @@ function serializePatch(patch: JobPatch): Record<string, unknown> {
   }
   if (patch.scoreProgress !== undefined) {
     body.scoreProgress = patch.scoreProgress;
+  }
+  if (patch.updateScoreDuration !== undefined) {
+    body.updateScoreDuration = patch.updateScoreDuration;
   }
   if (patch.addCompletedDiff !== undefined) {
     body.addCompletedDiff = patch.addCompletedDiff;

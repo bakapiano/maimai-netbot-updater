@@ -157,7 +157,7 @@ export default function LoginPage() {
         setProfile(profileFromStatus);
       }
 
-      if (res.data?.status === "completed" && res.data?.token) {
+      if (res.data?.token) {
         setToken(res.data.token);
         setPolling(false);
         try {

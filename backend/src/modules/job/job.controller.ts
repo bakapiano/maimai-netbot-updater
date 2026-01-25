@@ -15,6 +15,7 @@ import type { Request, Response } from 'express';
 
 import { AuthGuard } from '../auth/auth.guard';
 import { JobService } from './job.service';
+import { JobTempCacheService } from './job-temp-cache.service';
 import type { JobPatchBody } from './job.types';
 
 type AuthedRequest = Request & {
@@ -23,7 +24,10 @@ type AuthedRequest = Request & {
 
 @Controller('job')
 export class JobController {
-  constructor(private readonly jobs: JobService) {}
+  constructor(
+    private readonly jobs: JobService,
+    private readonly tempCache: JobTempCacheService,
+  ) {}
 
   @Post('create')
   async create(
@@ -99,5 +103,55 @@ export class JobController {
   @Patch(':jobId')
   async patch(@Param('jobId') jobId: string, @Body() body: JobPatchBody) {
     return this.jobs.patch(jobId, body);
+  }
+
+  /**
+   * 获取临时缓存的 FriendVS HTML
+   */
+  @Get(':jobId/cache/:diff/:type')
+  async getCache(
+    @Param('jobId') jobId: string,
+    @Param('diff') diffStr: string,
+    @Param('type') typeStr: string,
+  ) {
+    const diff = parseInt(diffStr, 10);
+    const type = parseInt(typeStr, 10);
+
+    if (Number.isNaN(diff) || Number.isNaN(type)) {
+      throw new BadRequestException('Invalid diff or type');
+    }
+
+    const html = await this.tempCache.get(jobId, diff, type);
+    if (!html) {
+      throw new BadRequestException('Cache not found');
+    }
+
+    return { html };
+  }
+
+  /**
+   * 设置临时缓存
+   */
+  @Post(':jobId/cache/:diff/:type')
+  @HttpCode(201)
+  async setCache(
+    @Param('jobId') jobId: string,
+    @Param('diff') diffStr: string,
+    @Param('type') typeStr: string,
+    @Body() body: { html?: unknown },
+  ) {
+    const diff = parseInt(diffStr, 10);
+    const type = parseInt(typeStr, 10);
+
+    if (Number.isNaN(diff) || Number.isNaN(type)) {
+      throw new BadRequestException('Invalid diff or type');
+    }
+
+    if (typeof body.html !== 'string') {
+      throw new BadRequestException('html must be a string');
+    }
+
+    await this.tempCache.set(jobId, diff, type, body.html);
+    return { success: true };
   }
 }
