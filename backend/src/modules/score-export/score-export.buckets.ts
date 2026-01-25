@@ -1,6 +1,3 @@
-import type { ChartPayload } from '../music/music.schema';
-import type { SyncScore } from '../sync/sync.schema';
-import { VERSION_ORDER } from './score-export.constants';
 import type {
   ChartEntry,
   LevelBucket,
@@ -8,6 +5,10 @@ import type {
   RatingSummary,
   VersionBucket,
 } from './score-export.types';
+
+import type { ChartPayload } from '../music/music.schema';
+import type { SyncScore } from '../sync/sync.schema';
+import { VERSION_ORDER } from './score-export.constants';
 
 export function buildRatingSummary(scores: SyncScore[]): RatingSummary | null {
   if (!Array.isArray(scores)) return null;
@@ -79,7 +80,7 @@ export function buildLevelBuckets(
         }))
         .sort(
           (a, b) =>
-            (a.detailNumeric ?? Infinity) - (b.detailNumeric ?? Infinity),
+            (b.detailNumeric ?? -Infinity) - (a.detailNumeric ?? -Infinity),
         ),
     }),
   );

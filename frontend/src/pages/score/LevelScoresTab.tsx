@@ -121,7 +121,7 @@ const buildBuckets = (
         }))
         .sort(
           (a, b) =>
-            (a.detailNumeric ?? Infinity) - (b.detailNumeric ?? Infinity),
+            (b.detailNumeric ?? -Infinity) - (a.detailNumeric ?? -Infinity),
         ),
     }),
   );

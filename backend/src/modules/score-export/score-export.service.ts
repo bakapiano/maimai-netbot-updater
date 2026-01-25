@@ -25,6 +25,11 @@ import {
 
 @Injectable()
 export class ScoreExportService {
+  private readonly iconCache = new Map<
+    string,
+    Awaited<ReturnType<typeof loadImage>> | null
+  >();
+
   constructor(
     @InjectModel(SyncEntity.name)
     private readonly syncModel: Model<SyncDocument>,
@@ -168,12 +173,12 @@ export class ScoreExportService {
       : ([] as MusicRow[]);
 
     const musicMap = new Map<string, MusicRow>();
-    const chartMap = new Map<number, ChartPayload>();
+    const chartMap = new Map<string, ChartPayload>();
     for (const music of musics) {
       musicMap.set(music.id, music);
       const charts = music.charts ?? [];
       for (const chart of charts) {
-        if (typeof chart.cid === 'number') {
+        if (typeof chart.cid === 'string') {
           chartMap.set(chart.cid, chart);
         }
       }
@@ -185,11 +190,11 @@ export class ScoreExportService {
   private buildCompactCard(
     score: SyncScore,
     musicMap: Map<string, MusicRow>,
-    chartMap: Map<number, ChartPayload>,
+    chartMap: Map<string, ChartPayload>,
   ): CompactCard {
     const music = musicMap.get(score.musicId);
     const chart =
-      typeof score.cid === 'number' ? chartMap.get(score.cid) : null;
+      typeof score.cid === 'string' ? chartMap.get(score.cid) : null;
     const detailLevelText =
       typeof chart?.detailLevel === 'number'
         ? chart.detailLevel.toFixed(1)
@@ -216,30 +221,30 @@ export class ScoreExportService {
       return loadImage(local);
     }
 
-    const padded = musicId.length < 5 ? musicId.padStart(5, '0') : musicId;
-    const url = `https://www.diving-fish.com/covers/${padded}.png`;
-
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const buf = Buffer.from(await res.arrayBuffer());
-      return loadImage(buf);
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   private async loadIconImage(
     icon: string,
   ): Promise<Awaited<ReturnType<typeof loadImage>> | null> {
+    if (this.iconCache.has(icon)) {
+      return this.iconCache.get(icon)!;
+    }
+
     const url = `https://maimai.wahlap.com/maimai-mobile/img/music_icon_${icon}.png`;
 
     try {
       const res = await fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        this.iconCache.set(icon, null);
+        return null;
+      }
       const buf = Buffer.from(await res.arrayBuffer());
-      return loadImage(buf);
+      const img = await loadImage(buf);
+      this.iconCache.set(icon, img);
+      return img;
     } catch {
+      this.iconCache.set(icon, null);
       return null;
     }
   }
