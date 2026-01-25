@@ -10,8 +10,8 @@ RUN npm run build
 
 FROM node:20-alpine
 
-# 安装 fontconfig 以支持字体渲染
-RUN apk add --no-cache fontconfig
+# 安装 fontconfig 以支持字体渲染，以及 curl 用于健康检查
+RUN apk add --no-cache fontconfig curl
 
 WORKDIR /app
 
