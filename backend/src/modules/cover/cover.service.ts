@@ -85,6 +85,52 @@ export class CoverService {
         try {
           const res = await fetch(url);
           if (!res.ok) {
+            // 第一层 fallback: 如果是 1xxxx 格式，尝试 10xxx -> 00xxx
+            if (id.startsWith('1') && id.length === 5) {
+              const fallbackId1 = '00' + id.substring(2);
+              const fallbackUrl1 = this.buildRemoteUrl(fallbackId1);
+              this.logger.log(`Trying fallback for ${id} -> ${fallbackId1}`);
+
+              try {
+                const fallbackRes1 = await fetch(fallbackUrl1);
+                if (fallbackRes1.ok) {
+                  const buf = Buffer.from(await fallbackRes1.arrayBuffer());
+                  await writeFile(localPath, buf);
+                  summary.saved += 1;
+                  return;
+                }
+              } catch (fallbackError1) {
+                this.logger.warn(`First fallback failed for ${fallbackId1}`);
+              }
+            }
+
+            // 第二层 fallback: lxns.net (五位数去掉第一位并去掉前导0，否则直接用原ID)
+            const songId =
+              id.length === 5 ? String(parseInt(id.substring(1))) : id;
+            const fallbackUrl2 = `https://assets.lxns.net/maimai/jacket/${songId}.png!webp`;
+            this.logger.log(
+              `Trying second fallback for ${id} -> songId ${songId}`,
+            );
+
+            try {
+              const fallbackRes2 = await fetch(fallbackUrl2);
+              const cacheControl = fallbackRes2.headers.get('cache-control');
+              if (fallbackRes2.ok && cacheControl !== 'no-cache') {
+                const buf = Buffer.from(await fallbackRes2.arrayBuffer());
+                await writeFile(localPath, buf);
+                summary.saved += 1;
+                return;
+              } else if (cacheControl === 'no-cache') {
+                this.logger.warn(
+                  `Second fallback returned 404 (no-cache) for songId ${songId}`,
+                );
+              }
+            } catch (fallbackError2) {
+              this.logger.warn(
+                `Second fallback also failed for songId ${songId}`,
+              );
+            }
+
             summary.failed += 1;
             this.logger.warn(
               `Cover fetch failed for ${id}: HTTP ${res.status}`,
