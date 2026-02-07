@@ -3,6 +3,7 @@
  * 封装所有与舞萌网站的 HTTP 交互
  */
 
+import { Agent, setGlobalDispatcher } from "undici";
 import {
   COOKIE_EXPIRE_LOCATIONS,
   COOKIE_EXPIRE_MARKERS,
@@ -29,6 +30,19 @@ import {
 import { CookieJar } from "tough-cookie";
 import config from "../config.ts";
 import makeFetchCookie from "fetch-cookie";
+
+/**
+ * 配置全局 HTTP Keep-Alive Agent
+ * 复用 TCP/TLS 连接，减少频繁建连导致的 ECONNRESET
+ */
+setGlobalDispatcher(
+  new Agent({
+    keepAliveTimeout: 30_000,
+    keepAliveMaxTimeout: 60_000,
+    pipelining: 1,
+    connections: 10,
+  }),
+);
 
 /**
  * Cookie 已过期错误
@@ -143,8 +157,12 @@ export class MaimaiHttpClient {
           throw e;
         }
 
-        const delay = RETRY.baseDelayMs * Math.pow(2, i);
-        console.log(`Retrying in ${delay}ms...`);
+        const baseDelay = RETRY.baseDelayMs * Math.pow(2, i);
+        const jitter = Math.random() * baseDelay * 0.5;
+        const delay = Math.round(baseDelay + jitter);
+        console.log(
+          `Retrying in ${delay}ms (attempt ${i + 1}/${retryCount})...`,
+        );
         await sleep(delay);
       }
     }
