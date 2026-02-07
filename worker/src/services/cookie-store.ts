@@ -12,6 +12,7 @@ import type { MaimaiCookieValues } from "../types/index.ts";
  */
 export class CookieStore {
   private cookieJars = new Map<string, CookieJar>();
+  private expiredBots = new Set<string>();
 
   /**
    * 获取指定 friendCode 的 CookieJar
@@ -47,10 +48,45 @@ export class CookieStore {
   }
 
   /**
+   * 标记指定 Bot 的 Cookie 已过期
+   */
+  markExpired(friendCode: string): void {
+    if (this.cookieJars.has(friendCode)) {
+      this.expiredBots.add(friendCode);
+      console.warn(`[CookieStore] Bot ${friendCode} marked as expired`);
+    }
+  }
+
+  /**
+   * 取消指定 Bot 的过期标记
+   */
+  markValid(friendCode: string): void {
+    if (this.expiredBots.delete(friendCode)) {
+      console.log(`[CookieStore] Bot ${friendCode} marked as valid`);
+    }
+  }
+
+  /**
+   * 检查指定 Bot 的 Cookie 是否已过期
+   */
+  isExpired(friendCode: string): boolean {
+    return this.expiredBots.has(friendCode);
+  }
+
+  /**
    * 获取所有已注册的 Bot friendCode 列表
    */
   getAllBotFriendCodes(): string[] {
     return Array.from(this.cookieJars.keys());
+  }
+
+  /**
+   * 获取所有未过期的 Bot friendCode 列表
+   */
+  getAvailableBotFriendCodes(): string[] {
+    return Array.from(this.cookieJars.keys()).filter(
+      (code) => !this.expiredBots.has(code),
+    );
   }
 
   /**
@@ -61,10 +97,11 @@ export class CookieStore {
   }
 
   /**
-   * 清空所有 CookieJar
+   * 清空所有 CookieJar 和过期标记
    */
   clear(): void {
     this.cookieJars.clear();
+    this.expiredBots.clear();
   }
 
   /**

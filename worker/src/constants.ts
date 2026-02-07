@@ -107,11 +107,15 @@ export const WORKER_DEFAULTS = {
   /** 最大并发处理任务数 */
   maxProcessJobs: 16,
   /** Worker tick 间隔 (ms) */
-  tickIntervalMs: 5 * 1000,
+  tickIntervalMs: 1000,
   /** Friend VS 并发数 */
   friendVSConcurrency: 2,
   /** 清理任务间隔 (ms) - 默认 5 分钟 */
   cleanupIntervalMs: 5 * 60 * 1000,
+  /** Cookie 健康检查间隔 (ms) - 默认 1 分钟 */
+  cookieHealthCheckIntervalMs: 60 * 1000,
+  /** Bot 状态上报间隔 (ms) - 默认 20 秒 */
+  botStatusReportIntervalMs: 20_000,
 } as const;
 
 // ============================================================================

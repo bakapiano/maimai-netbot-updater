@@ -61,6 +61,7 @@ export interface ActiveJob {
   id: string;
   friendCode: string;
   skipUpdateScore: boolean;
+  botUserFriendCode: string | null;
   status: string;
   stage: string;
   executing: boolean;
@@ -159,6 +160,7 @@ export class AdminService {
         id: job.id,
         friendCode: job.friendCode,
         skipUpdateScore: job.skipUpdateScore,
+        botUserFriendCode: job.botUserFriendCode ?? null,
         status: job.status,
         stage: job.stage,
         executing: job.executing,

@@ -7,7 +7,11 @@ import * as http from "http";
 import * as net from "net";
 import * as url from "url";
 
-import { MaimaiHttpClient, getCookieByAuthUrl } from "./services/index.ts";
+import {
+  MaimaiHttpClient,
+  getCookieByAuthUrl,
+  reportBotStatus,
+} from "./services/index.ts";
 import { cookieStore, runtimeState } from "./state.ts";
 
 import { HTTPParser } from "http-parser-js";
@@ -66,7 +70,12 @@ async function onAuthHook(href: string): Promise<string> {
     if (friendCode) {
       console.log(JSON.stringify(cj.toJSON(), null, 2));
       cookieStore.set(friendCode, cj);
+      cookieStore.markValid(friendCode);
       console.log(`[Proxy] Cookie updated successfully for ${friendCode}.`);
+      // 登录成功后立即上报 Bot 状态
+      reportBotStatus().catch((err) =>
+        console.error("[Proxy] Bot status report after login failed:", err),
+      );
       return `${config.redirectUrl}?friendCode=${friendCode}`;
     } else {
       console.error("[Proxy] Failed to get friend code");

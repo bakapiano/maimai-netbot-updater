@@ -34,9 +34,16 @@ import {
   IconMusic,
   IconPhoto,
   IconRefresh,
+  IconRobot,
   IconUsers,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+interface BotStatus {
+  friendCode: string;
+  available: boolean;
+  lastReportedAt: string;
+}
 
 interface AdminStats {
   userCount: number;
@@ -91,6 +98,7 @@ interface ActiveJob {
   id: string;
   friendCode: string;
   skipUpdateScore: boolean;
+  botUserFriendCode: string | null;
   status: string;
   stage: string;
   executing: boolean;
@@ -211,6 +219,9 @@ export default function AdminPage() {
   const [activeJobs, setActiveJobs] = useState<ActiveJobsStats | null>(null);
   const [activeJobsLoading, setActiveJobsLoading] = useState(false);
   const [autoRefreshActiveJobs, setAutoRefreshActiveJobs] = useState(true);
+
+  const [botStatuses, setBotStatuses] = useState<BotStatus[] | null>(null);
+  const [botStatusesLoading, setBotStatusesLoading] = useState(false);
 
   const paginatedUsers = useMemo(() => {
     const start = (userPage - 1) * usersPerPage;
@@ -397,6 +408,19 @@ export default function AdminPage() {
     }
   }, [password]);
 
+  const loadBotStatuses = useCallback(async () => {
+    if (!password) return;
+    setBotStatusesLoading(true);
+    const res = await adminFetch<BotStatus[]>(
+      "/api/admin/bot-status",
+      password,
+    );
+    setBotStatusesLoading(false);
+    if (res.ok && res.data) {
+      setBotStatuses(res.data);
+    }
+  }, [password]);
+
   // Auto verify if password is stored
   useEffect(() => {
     if (password && !verified) {
@@ -455,14 +479,28 @@ export default function AdminPage() {
     }
   }, [verified, password, activeJobs, loadActiveJobs]);
 
+  // Load bot statuses when verified
+  useEffect(() => {
+    if (verified && password && !botStatuses) {
+      void loadBotStatuses();
+    }
+  }, [verified, password, botStatuses, loadBotStatuses]);
+
   // Auto refresh active jobs every 5 seconds
   useEffect(() => {
     if (!verified || !password || !autoRefreshActiveJobs) return;
     const interval = setInterval(() => {
       void loadActiveJobs();
+      void loadBotStatuses();
     }, 5000);
     return () => clearInterval(interval);
-  }, [verified, password, autoRefreshActiveJobs, loadActiveJobs]);
+  }, [
+    verified,
+    password,
+    autoRefreshActiveJobs,
+    loadActiveJobs,
+    loadBotStatuses,
+  ]);
 
   if (!verified) {
     return (
@@ -514,6 +552,84 @@ export default function AdminPage() {
             退出
           </Button>
         </Group>
+
+        <Card withBorder shadow="sm" padding="lg" radius="md">
+          <Stack gap="md">
+            <Group justify="space-between" align="center">
+              <Group gap="xs">
+                <IconRobot size={20} />
+                <Text fw={600}>Bot 状态</Text>
+                {botStatuses && (
+                  <Group gap="xs">
+                    <Badge color="green" variant="light">
+                      可用: {botStatuses.filter((b) => b.available).length}
+                    </Badge>
+                    <Badge color="red" variant="light">
+                      不可用: {botStatuses.filter((b) => !b.available).length}
+                    </Badge>
+                  </Group>
+                )}
+              </Group>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconRefresh size={14} />}
+                onClick={loadBotStatuses}
+                loading={botStatusesLoading}
+              >
+                刷新
+              </Button>
+            </Group>
+
+            {botStatuses && botStatuses.length > 0 ? (
+              <Table striped highlightOnHover withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Bot 好友码</Table.Th>
+                    <Table.Th>状态</Table.Th>
+                    <Table.Th>最近上报时间</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {botStatuses.map((bot) => (
+                    <Table.Tr key={bot.friendCode}>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace">
+                          {bot.friendCode}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={bot.available ? "green" : "red"}
+                          variant="light"
+                          size="sm"
+                        >
+                          {bot.available ? "可用" : "不可用"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {new Date(bot.lastReportedAt).toLocaleString(
+                            "zh-CN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            },
+                          )}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            ) : (
+              <Text size="sm" c="dimmed" ta="center">
+                {botStatusesLoading ? "加载中..." : "暂无 Bot 状态数据"}
+              </Text>
+            )}
+          </Stack>
+        </Card>
 
         <Card withBorder shadow="sm" padding="lg" radius="md">
           <Group gap="xs" mb="md">
@@ -654,6 +770,7 @@ export default function AdminPage() {
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>好友码</Table.Th>
+                    <Table.Th>Bot</Table.Th>
                     <Table.Th>状态</Table.Th>
                     <Table.Th>阶段</Table.Th>
                     <Table.Th>进度</Table.Th>
@@ -667,6 +784,11 @@ export default function AdminPage() {
                       <Table.Td>
                         <Text size="sm" ff="monospace">
                           {job.friendCode}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace" c="dimmed">
+                          {job.botUserFriendCode ?? "-"}
                         </Text>
                       </Table.Td>
                       <Table.Td>

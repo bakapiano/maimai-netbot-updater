@@ -16,6 +16,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 import { FriendManager } from "./friend-manager.ts";
 import { ScoreAggregator } from "./score-aggregator.ts";
+import { cookieStore } from "./cookie-store.ts";
 import { randomUUID } from "node:crypto";
 import { updateJob } from "../job-service-client.ts";
 
@@ -85,8 +86,12 @@ export class JobHandler {
     } catch (e: unknown) {
       // CookieExpiredError 不标记为 failed，让任务可以重试
       if (e instanceof CookieExpiredError) {
+        // 标记该 Bot 的 Cookie 已过期，阻止后续使用
+        if (this.job.botUserFriendCode) {
+          cookieStore.markExpired(this.job.botUserFriendCode);
+        }
         console.warn(
-          `[JobHandler] Job ${this.job.id}: Cookie expired, will retry later`,
+          `[JobHandler] Job ${this.job.id}: Cookie expired, bot marked as expired, will retry later`,
         );
         return;
       }

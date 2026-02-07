@@ -6,6 +6,7 @@ import { UserEntity, UserSchema } from '../users/user.schema';
 import { AdminController } from './admin.controller';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
+import { BotStatusService } from './bot-status.service';
 import { CoverModule } from '../cover/cover.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -23,6 +24,6 @@ import { MusicModule } from '../music/music.module';
     MusicModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, AdminGuard],
+  providers: [AdminService, AdminGuard, BotStatusService],
 })
 export class AdminModule {}

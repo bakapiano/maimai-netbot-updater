@@ -35,14 +35,14 @@ import makeFetchCookie from "fetch-cookie";
  * 配置全局 HTTP Keep-Alive Agent
  * 复用 TCP/TLS 连接，减少频繁建连导致的 ECONNRESET
  */
-setGlobalDispatcher(
-  new Agent({
-    keepAliveTimeout: 30_000,
-    keepAliveMaxTimeout: 60_000,
-    pipelining: 1,
-    connections: 10,
-  }),
-);
+// setGlobalDispatcher(
+//   new Agent({
+//     keepAliveTimeout: 30_000,
+//     keepAliveMaxTimeout: 60_000,
+//     pipelining: 1,
+//     connections: 10,
+//   }),
+// );
 
 /**
  * Cookie 已过期错误
@@ -435,7 +435,7 @@ export async function getCookieByAuthUrl(authUrl: string): Promise<CookieJar> {
   await fetchWithCookie(authUrl, {
     headers: {
       Host: "tgk-wcaime.wahlap.com",
-      Connection: "keep-alive",
+      // Connection: "keep-alive",
       "Upgrade-Insecure-Requests": "1",
       "User-Agent": WECHAT_USER_AGENT,
       Accept:
