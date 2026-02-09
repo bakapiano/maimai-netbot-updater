@@ -11,6 +11,7 @@ import type {
 } from "../types/index.ts";
 import { CookieExpiredError, MaimaiHttpClient } from "./maimai-client.ts";
 import { DIFFICULTIES, TIMEOUTS } from "../constants.ts";
+import { clearApiLogBuffer, flushApiLogs } from "../job-api-log-client.ts";
 import { dirname, join } from "node:path";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
@@ -19,7 +20,6 @@ import { ScoreAggregator } from "./score-aggregator.ts";
 import { cookieStore } from "./cookie-store.ts";
 import { randomUUID } from "node:crypto";
 import { updateJob } from "../job-service-client.ts";
-import { flushApiLogs, clearApiLogBuffer } from "../job-api-log-client.ts";
 
 export interface JobHandlerConfig {
   /** 是否跳过好友清理 */
@@ -142,17 +142,33 @@ export class JobHandler {
     }
 
     console.log(`[JobHandler] Job ${this.job.id}: Sending friend request...`);
-    await this.friendManager.sendFriendRequest(this.job.friendCode);
-    await this.applyPatch({ stage: "wait_acceptance", updatedAt: new Date() });
 
-    const sentRequests = await this.friendManager.getSentRequests();
-    const match = sentRequests.find(
-      (s) => s.friendCode === this.job.friendCode,
-    );
+    const maxRetries = 3;
+    let match: SentFriendRequest | undefined;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      await this.friendManager.sendFriendRequest(this.job.friendCode);
+
+      const sentRequests = await this.friendManager.getSentRequests();
+      match = sentRequests.find((s) => s.friendCode === this.job.friendCode);
+
+      if (match || this.config.skipCleanUpFriend) {
+        break;
+      }
+
+      if (attempt < maxRetries) {
+        console.warn(
+          `[JobHandler] Job ${this.job.id}: Friend request not found in sent list, retrying (${attempt}/${maxRetries})...`,
+        );
+        await this.sleep(10_000);
+      }
+    }
 
     if (!this.config.skipCleanUpFriend && !match) {
       throw new Error("发送好友请求失败");
     }
+
+    await this.applyPatch({ stage: "wait_acceptance", updatedAt: new Date() });
 
     await this.applyPatch({
       friendRequestSentAt: match?.appliedAt ?? new Date().toISOString(),

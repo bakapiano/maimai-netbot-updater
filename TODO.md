@@ -6,7 +6,6 @@
 - [] 中二支持
 - [] 离线模式 - 仅使用前端 cache 在服务器挂了的时候
 - [] 保护 job upsert 相关 API
-- [] 后台管理 worker / bot 状态/ graceful shutdown worker & bot
 - [] 后台直接 upsert TODO list
 - [] fix lynx 数据源（线上 version 没法正确map， why？）(落雪的 dx 谱 id 和水鱼的有出入)
 - [] add "https://dxrating.net/search" as source
@@ -22,3 +21,4 @@
 - [] 所有铺面 search by name
 - [] TODO fix 11494 封面（怎么变句子怪兽了）
 - [] TODO セイクリッド　ルイン 传不上去 圣墟
+- [] TODO ADB 控制安卓自动恢复登陆页面
