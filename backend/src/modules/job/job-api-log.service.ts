@@ -34,14 +34,14 @@ export class JobApiLogService {
   async saveLogs(jobId: string, logs: ApiLogEntry[]): Promise<void> {
     if (logs.length === 0) return;
 
-    const now = new Date();
+    const fallback = new Date();
     const docs = logs.map((log) => ({
       jobId,
       url: log.url,
       method: log.method,
       statusCode: log.statusCode,
       responseBody: log.responseBody ?? null,
-      createdAt: now,
+      createdAt: fallback,
     }));
 
     await this.logModel.insertMany(docs);

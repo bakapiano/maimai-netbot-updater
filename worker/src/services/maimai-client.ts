@@ -142,12 +142,16 @@ export class MaimaiHttpClient {
 
         // 记录 API 调用日志
         if (this.jobId) {
-          recordApiLog(this.jobId, {
-            url,
-            method: options.method ?? "GET",
-            statusCode: result.status,
-            responseBody: body,
-          });
+          try {
+            recordApiLog(this.jobId, {
+              url,
+              method: options.method ?? "GET",
+              statusCode: result.status,
+              responseBody: body,
+            });
+          } catch {
+            // Best-effort logging; don't impact main request flow
+          }
         }
 
         return result;

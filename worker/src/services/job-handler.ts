@@ -109,7 +109,12 @@ export class JobHandler {
       this.stopHeartbeat();
 
       // 上报并清理 API 日志
-      await flushApiLogs(this.job.id).catch(() => {});
+      await flushApiLogs(this.job.id).catch((err) => {
+        console.warn(
+          `[JobHandler] Job ${this.job.id}: Failed to flush API logs`,
+          err,
+        );
+      });
       clearApiLogBuffer(this.job.id);
       this.client.jobId = null;
 

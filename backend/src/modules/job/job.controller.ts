@@ -171,7 +171,8 @@ export class JobController {
     }
 
     const logs: ApiLogEntry[] = [];
-    for (const entry of body.logs) {
+    for (let i = 0; i < body.logs.length; i++) {
+      const entry = body.logs[i];
       if (
         typeof entry !== 'object' ||
         entry === null ||
@@ -179,7 +180,9 @@ export class JobController {
         typeof entry.method !== 'string' ||
         typeof entry.statusCode !== 'number'
       ) {
-        throw new BadRequestException('Invalid log entry');
+        throw new BadRequestException(
+          `Invalid log entry at index ${i}: url, method (string) and statusCode (number) are required`,
+        );
       }
       logs.push({
         url: entry.url,
