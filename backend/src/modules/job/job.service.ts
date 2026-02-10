@@ -87,7 +87,7 @@ export class JobService {
   }) {
     const id = randomUUID();
     const now = new Date();
-    const jobType: JobType = input.jobType ?? 'immediate';
+    const resolvedJobType: JobType = input.jobType ?? 'immediate';
 
     const recent = await this.jobModel
       .findOne({ friendCode: input.friendCode })
@@ -118,7 +118,7 @@ export class JobService {
     const created = await this.jobModel.create({
       id,
       friendCode: input.friendCode,
-      jobType,
+      jobType: resolvedJobType,
       skipUpdateScore: input.skipUpdateScore,
       botUserFriendCode: null,
       friendRequestSentAt: null,
@@ -361,7 +361,11 @@ export class JobService {
 
     const filter = {
       skipUpdateScore: false,
-      jobType: { $in: ['immediate', null, undefined] },
+      $or: [
+        { jobType: 'immediate' },
+        { jobType: { $exists: false } },
+        { jobType: null },
+      ],
       createdAt: { $gte: oneHourAgo },
     };
 

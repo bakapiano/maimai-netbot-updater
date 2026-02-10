@@ -812,8 +812,7 @@ export default function SyncPage() {
         </Group>
 
         <Text size="sm" c="dimmed">
-          Bot
-          先添加好友，在每日凌晨空闲时段自动更新成绩，成功率更高。
+          Bot 先添加好友，在每日凌晨空闲时段自动更新成绩，成功率更高。
         </Text>
 
         {lowSuccessRate && !idleUpdateStatus?.enabled && (

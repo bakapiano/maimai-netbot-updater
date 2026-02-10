@@ -19,7 +19,7 @@ import { FriendManager } from "./friend-manager.ts";
 import { ScoreAggregator } from "./score-aggregator.ts";
 import { cookieStore } from "./cookie-store.ts";
 import { randomUUID } from "node:crypto";
-import { updateJob, markIdleUpdateReady } from "../job-service-client.ts";
+import { updateJob, markIdleUpdateReady, checkIsIdleUpdateBot } from "../job-service-client.ts";
 
 export interface JobHandlerConfig {
   /** 是否跳过好友清理 */
@@ -350,8 +350,27 @@ export class JobHandler {
 
     // 清理好友关系（不等待完成）
     // idle_update_score job 完成后也清理好友（因为调度器已清除 user 标记）
-    const shouldSkipCleanup =
+    // 对于 immediate job，如果当前 bot 是用户的闲时更新 bot，跳过删除好友
+    let shouldSkipCleanup =
       this.config.skipCleanUpFriend || jobType === "idle_add_friend";
+
+    if (!shouldSkipCleanup && jobType === "immediate" && this.job.botUserFriendCode) {
+      try {
+        const isIdleBot = await checkIsIdleUpdateBot(
+          this.job.friendCode,
+          this.job.botUserFriendCode,
+        );
+        if (isIdleBot) {
+          shouldSkipCleanup = true;
+          console.log(
+            `[JobHandler] Job ${this.job.id}: Skipping friend cleanup (bot is idle update bot for this user)`,
+          );
+        }
+      } catch {
+        // Best effort check
+      }
+    }
+
     if (!shouldSkipCleanup) {
       this.friendManager.cleanUpFriend(this.job.friendCode).catch(() => {});
     }
@@ -393,7 +412,21 @@ export class JobHandler {
     }
 
     if (!this.config.skipCleanUpFriend) {
-      this.friendManager.cleanUpFriend(this.job.friendCode).catch(() => {});
+      // 对于 immediate job，如果当前 bot 是用户的闲时更新 bot，跳过删除好友
+      let shouldSkip = false;
+      if (jobType === "immediate" && this.job.botUserFriendCode) {
+        try {
+          shouldSkip = await checkIsIdleUpdateBot(
+            this.job.friendCode,
+            this.job.botUserFriendCode,
+          );
+        } catch {
+          // Best effort
+        }
+      }
+      if (!shouldSkip) {
+        this.friendManager.cleanUpFriend(this.job.friendCode).catch(() => {});
+      }
     }
   }
 

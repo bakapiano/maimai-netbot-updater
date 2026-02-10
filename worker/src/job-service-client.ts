@@ -211,3 +211,14 @@ export async function getIdleUpdateFriendCodes(
 
   return (await response.json()) as string[];
 }
+
+/**
+ * 检查当前 bot 是否是用户的闲时更新 bot
+ */
+export async function checkIsIdleUpdateBot(
+  friendCode: string,
+  botFriendCode: string,
+): Promise<boolean> {
+  const friendCodes = await getIdleUpdateFriendCodes(botFriendCode);
+  return friendCodes.includes(friendCode);
+}

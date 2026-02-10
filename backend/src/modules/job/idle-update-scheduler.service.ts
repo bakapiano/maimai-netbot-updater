@@ -95,7 +95,7 @@ export class IdleUpdateSchedulerService
       }
 
       // 控制并发度 - 每批 concurrency 个后等待一下
-      if (created % this.concurrency === 0) {
+      if (created > 0 && created % this.concurrency === 0) {
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
