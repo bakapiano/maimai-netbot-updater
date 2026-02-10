@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { IconClock, IconInfoCircle } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState } from "react";
 
@@ -105,6 +106,15 @@ export default function SyncPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  // Idle update state
+  const [idleUpdateStatus, setIdleUpdateStatus] = useState<{
+    enabled: boolean;
+    botFriendCode: string | null;
+    pendingJob: boolean;
+  } | null>(null);
+  const [idleUpdateLoading, setIdleUpdateLoading] = useState(false);
+  const [lowSuccessRate, setLowSuccessRate] = useState(false);
 
   const totalWaitSeconds = 5 * 60;
   const remainingPercent = Math.min(
@@ -215,6 +225,37 @@ export default function SyncPage() {
       if (syncRes.ok && syncRes.data) {
         setLastSync(syncRes.data);
       }
+
+      // Load idle update status
+      const idleRes = await fetchJson<{
+        enabled: boolean;
+        botFriendCode: string | null;
+        pendingJob: boolean;
+      }>("/api/users/idle-update/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (cancelled) return;
+
+      if (idleRes.ok && idleRes.data) {
+        setIdleUpdateStatus(idleRes.data);
+      }
+
+      // Check success rate for recommendation
+      try {
+        const statsRes = await fetchJson<{
+          totalCount: number;
+          successRate: number;
+        }>("/api/job/stats/recent");
+        if (
+          statsRes.ok &&
+          statsRes.data &&
+          statsRes.data.totalCount >= 5 &&
+          statsRes.data.successRate <= 50
+        ) {
+          setLowSuccessRate(true);
+        }
+      } catch {}
 
       setLoading(false);
     };
@@ -336,6 +377,86 @@ export default function SyncPage() {
         errorData?.message || errorData?.error || `HTTP ${res.status}`;
       setSyncError(`创建同步任务失败: ${errorMessage}`);
     }
+  };
+
+  // Enable idle update
+  const enableIdleUpdate = async () => {
+    if (!token) return;
+
+    setIdleUpdateLoading(true);
+    const res = await fetchJson<{ message?: string }>(
+      "/api/users/idle-update/enable",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (res.ok) {
+      notifications.show({
+        title: "闲时更新",
+        message: "闲时更新任务已创建，等待 Bot 添加好友",
+        color: "blue",
+      });
+      // Refresh idle update status
+      const idleRes = await fetchJson<{
+        enabled: boolean;
+        botFriendCode: string | null;
+        pendingJob: boolean;
+      }>("/api/users/idle-update/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (idleRes.ok && idleRes.data) {
+        setIdleUpdateStatus(idleRes.data);
+      }
+    } else {
+      const errorData = res.data as { message?: string; error?: string } | null;
+      notifications.show({
+        title: "开启失败",
+        message:
+          errorData?.message || errorData?.error || `HTTP ${res.status}`,
+        color: "red",
+      });
+    }
+    setIdleUpdateLoading(false);
+  };
+
+  // Disable idle update
+  const disableIdleUpdate = async () => {
+    if (!token) return;
+
+    setIdleUpdateLoading(true);
+    const res = await fetchJson<{ message?: string }>(
+      "/api/users/idle-update/disable",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (res.ok) {
+      notifications.show({
+        title: "闲时更新",
+        message: "闲时更新已关闭",
+        color: "green",
+      });
+      setIdleUpdateStatus({ enabled: false, botFriendCode: null, pendingJob: false });
+    } else {
+      const errorData = res.data as { message?: string; error?: string } | null;
+      notifications.show({
+        title: "关闭失败",
+        message:
+          errorData?.message || errorData?.error || `HTTP ${res.status}`,
+        color: "red",
+      });
+    }
+    setIdleUpdateLoading(false);
   };
 
   // Export to diving-fish
@@ -678,6 +799,88 @@ export default function SyncPage() {
               )}
             </Stack>
           </Card>
+        )}
+      </Stack>
+
+      {/* Idle Update Section */}
+      <Stack gap="md">
+        <Group gap="xs">
+          <IconClock size={20} />
+          <Text fw={600} size="lg">
+            闲时更新
+          </Text>
+        </Group>
+
+        <Text size="sm" c="dimmed">
+          Bot
+          先添加好友，在每日凌晨空闲时段自动更新成绩，成功率更高。
+        </Text>
+
+        {lowSuccessRate && !idleUpdateStatus?.enabled && (
+          <Alert
+            variant="light"
+            color="yellow"
+            title="推荐使用闲时更新"
+            icon={<IconInfoCircle size={16} />}
+            radius="md"
+          >
+            <Text size="sm">
+              当前立即更新成功率较低，建议开启闲时更新以获得更好的体验。
+            </Text>
+          </Alert>
+        )}
+
+        {idleUpdateStatus?.enabled && (
+          <Card withBorder padding="md" radius="md" style={{
+            borderLeft: "4px solid var(--mantine-color-green-6)",
+          }}>
+            <Stack gap="sm">
+              <Group justify="space-between" align="center">
+                <Group gap="xs">
+                  <Badge color="green" variant="light" size="lg">
+                    已开启
+                  </Badge>
+                  <Text size="sm" c="dimmed">
+                    Bot 将在每日凌晨自动更新成绩
+                  </Text>
+                </Group>
+                <Button
+                  variant="light"
+                  color="red"
+                  size="xs"
+                  onClick={disableIdleUpdate}
+                  loading={idleUpdateLoading}
+                >
+                  关闭
+                </Button>
+              </Group>
+            </Stack>
+          </Card>
+        )}
+
+        {idleUpdateStatus?.pendingJob && !idleUpdateStatus?.enabled && (
+          <Card withBorder padding="md" radius="md" style={{
+            borderLeft: "4px solid var(--mantine-color-blue-6)",
+          }}>
+            <Group gap="xs">
+              <Loader size="xs" />
+              <Text size="sm">
+                闲时更新任务进行中，Bot 正在添加好友，请接受好友请求...
+              </Text>
+            </Group>
+          </Card>
+        )}
+
+        {!idleUpdateStatus?.enabled && !idleUpdateStatus?.pendingJob && (
+          <Button
+            variant="light"
+            leftSection={<IconClock size={16} />}
+            onClick={enableIdleUpdate}
+            loading={idleUpdateLoading}
+            disabled={!profile?.friendCode || idleUpdateLoading}
+          >
+            开启闲时更新
+          </Button>
         )}
       </Stack>
 

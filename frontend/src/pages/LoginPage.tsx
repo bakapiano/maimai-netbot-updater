@@ -15,7 +15,7 @@ import {
   Tooltip,
   useMantineColorScheme,
 } from "@mantine/core";
-import { IconInfoCircle, IconCopy } from "@tabler/icons-react";
+import { IconInfoCircle, IconCopy, IconClock } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProfileCard, type UserProfile } from "../components/ProfileCard";
@@ -63,6 +63,8 @@ export default function LoginPage() {
     }
   });
   const [skipUpdateScore, setSkipUpdateScore] = useState(true);
+  const [useIdleUpdate, setUseIdleUpdate] = useState(false);
+  const [lowSuccessRate, setLowSuccessRate] = useState(false);
   const [_health, setHealth] = useState("");
   const [jobId, setJobId] = useState(() => {
     try {
@@ -214,11 +216,30 @@ export default function LoginPage() {
     setFriendRequestSentAt("");
     setJobPickedAt(null);
     setTimeLeft(0);
+    setLowSuccessRate(false);
 
     const trimmedCode = friendCode.trim();
     try {
       localStorage.setItem("lastFriendCode", trimmedCode);
     } catch {}
+
+    // 如果不跳过更新成绩且不是闲时更新，检查立即更新的成功率
+    if (!skipUpdateScore && !useIdleUpdate) {
+      try {
+        const statsRes = await fetchJson<{
+          totalCount: number;
+          successRate: number;
+        }>("/api/job/stats/recent");
+        if (
+          statsRes.ok &&
+          statsRes.data &&
+          statsRes.data.totalCount >= 5 &&
+          statsRes.data.successRate <= 50
+        ) {
+          setLowSuccessRate(true);
+        }
+      } catch {}
+    }
 
     const res = await fetchJson<LoginRequest>("/api/auth/login-request", {
       method: "POST",
@@ -386,11 +407,45 @@ export default function LoginPage() {
                     <Checkbox
                       label="同时更新成绩"
                       checked={!skipUpdateScore}
-                      onChange={(e) =>
-                        setSkipUpdateScore(!e.currentTarget.checked)
-                      }
+                      onChange={(e) => {
+                        setSkipUpdateScore(!e.currentTarget.checked);
+                        if (e.currentTarget.checked === false) {
+                          setUseIdleUpdate(false);
+                        }
+                      }}
                       disabled={polling}
                     />
+
+                    {!skipUpdateScore && (
+                      <Checkbox
+                        label={
+                          <Group gap={4}>
+                            <IconClock size={14} />
+                            <Text size="sm">使用闲时更新（推荐）</Text>
+                          </Group>
+                        }
+                        description="Bot 先添加好友，在凌晨空闲时段自动更新成绩"
+                        checked={useIdleUpdate}
+                        onChange={(e) =>
+                          setUseIdleUpdate(e.currentTarget.checked)
+                        }
+                        disabled={polling}
+                      />
+                    )}
+
+                    {lowSuccessRate && !useIdleUpdate && (
+                      <Alert
+                        variant="light"
+                        color="yellow"
+                        title="立即更新成功率较低"
+                        icon={<IconInfoCircle size={16} />}
+                        radius="md"
+                      >
+                        <Text size="sm">
+                          当前立即更新成功率较低，建议使用闲时更新以获得更好的体验。
+                        </Text>
+                      </Alert>
+                    )}
 
                     <Group justify="center" gap="sm">
                       <Button
