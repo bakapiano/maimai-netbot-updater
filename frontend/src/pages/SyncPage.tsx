@@ -35,6 +35,21 @@ type LastSyncInfo = {
   scores: unknown[];
 };
 
+type IdleUpdateStatusResponse = {
+  enabled: boolean;
+  botFriendCode: string | null;
+  pendingJob: boolean;
+  activeJob?: {
+    id: string;
+    jobType: "idle_add_friend" | "idle_update_score";
+    status: string;
+    stage: string;
+    scoreProgress?: { completedDiffs: number[]; totalDiffs: number } | null;
+    friendRequestSentAt?: string | null;
+    pickedAt?: string | null;
+  } | null;
+};
+
 type JobStatus = {
   id: string;
   friendCode: string;
@@ -108,11 +123,8 @@ export default function SyncPage() {
   const [timeLeft, setTimeLeft] = useState(0);
 
   // Idle update state
-  const [idleUpdateStatus, setIdleUpdateStatus] = useState<{
-    enabled: boolean;
-    botFriendCode: string | null;
-    pendingJob: boolean;
-  } | null>(null);
+  const [idleUpdateStatus, setIdleUpdateStatus] =
+    useState<IdleUpdateStatusResponse | null>(null);
   const [idleUpdateLoading, setIdleUpdateLoading] = useState(false);
   const [lowSuccessRate, setLowSuccessRate] = useState(false);
 
@@ -227,13 +239,10 @@ export default function SyncPage() {
       }
 
       // Load idle update status
-      const idleRes = await fetchJson<{
-        enabled: boolean;
-        botFriendCode: string | null;
-        pendingJob: boolean;
-      }>("/api/users/idle-update/status", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const idleRes = await fetchJson<IdleUpdateStatusResponse>(
+        "/api/users/idle-update/status",
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
       if (cancelled) return;
 
@@ -323,6 +332,35 @@ export default function SyncPage() {
     return () => clearInterval(interval);
   }, [syncJobId, syncing, loadProfile, loadLastSync]);
 
+  // Poll idle update status when pendingJob is true
+  useEffect(() => {
+    if (!token || !idleUpdateStatus?.pendingJob) return;
+
+    const interval = setInterval(async () => {
+      const res = await fetchJson<IdleUpdateStatusResponse>(
+        "/api/users/idle-update/status",
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (res.ok && res.data) {
+        setIdleUpdateStatus(res.data);
+        // Stop polling once pendingJob is resolved
+        if (!res.data.pendingJob) {
+          clearInterval(interval);
+          if (res.data.enabled) {
+            notifications.show({
+              title: "闲时更新",
+              message: "Bot 已成功添加好友，闲时更新已开启",
+              color: "green",
+            });
+          }
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [token, idleUpdateStatus?.pendingJob]);
+
   // Handle timeout countdown for wait_acceptance stage
   useEffect(() => {
     if (
@@ -402,13 +440,10 @@ export default function SyncPage() {
         color: "blue",
       });
       // Refresh idle update status
-      const idleRes = await fetchJson<{
-        enabled: boolean;
-        botFriendCode: string | null;
-        pendingJob: boolean;
-      }>("/api/users/idle-update/status", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const idleRes = await fetchJson<IdleUpdateStatusResponse>(
+        "/api/users/idle-update/status",
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       if (idleRes.ok && idleRes.data) {
         setIdleUpdateStatus(idleRes.data);
       }
@@ -416,8 +451,7 @@ export default function SyncPage() {
       const errorData = res.data as { message?: string; error?: string } | null;
       notifications.show({
         title: "开启失败",
-        message:
-          errorData?.message || errorData?.error || `HTTP ${res.status}`,
+        message: errorData?.message || errorData?.error || `HTTP ${res.status}`,
         color: "red",
       });
     }
@@ -446,13 +480,16 @@ export default function SyncPage() {
         message: "闲时更新已关闭",
         color: "green",
       });
-      setIdleUpdateStatus({ enabled: false, botFriendCode: null, pendingJob: false });
+      setIdleUpdateStatus({
+        enabled: false,
+        botFriendCode: null,
+        pendingJob: false,
+      });
     } else {
       const errorData = res.data as { message?: string; error?: string } | null;
       notifications.show({
         title: "关闭失败",
-        message:
-          errorData?.message || errorData?.error || `HTTP ${res.status}`,
+        message: errorData?.message || errorData?.error || `HTTP ${res.status}`,
         color: "red",
       });
     }
@@ -805,14 +842,13 @@ export default function SyncPage() {
       {/* Idle Update Section */}
       <Stack gap="md">
         <Group gap="xs">
-          <IconClock size={20} />
           <Text fw={600} size="lg">
-            闲时更新
+            闲时更新 (测试中)
           </Text>
         </Group>
 
         <Text size="sm" c="dimmed">
-          Bot 先添加好友，在每日凌晨空闲时段自动更新成绩，成功率更高。
+          先和 Bot 添加好友，在当日凌晨空闲时段自动更新成绩，成功率更高。
         </Text>
 
         {lowSuccessRate && !idleUpdateStatus?.enabled && (
@@ -824,15 +860,20 @@ export default function SyncPage() {
             radius="md"
           >
             <Text size="sm">
-              当前立即更新成功率较低，建议开启闲时更新以获得更好的体验。
+              当前立即更新成功率较低，建议使用闲时更新以获得更好的体验。
             </Text>
           </Alert>
         )}
 
         {idleUpdateStatus?.enabled && (
-          <Card withBorder padding="md" radius="md" style={{
-            borderLeft: "4px solid var(--mantine-color-green-6)",
-          }}>
+          <Card
+            withBorder
+            padding="md"
+            radius="md"
+            style={{
+              borderLeft: "4px solid var(--mantine-color-green-6)",
+            }}
+          >
             <Stack gap="sm">
               <Group justify="space-between" align="center">
                 <Group gap="xs">
@@ -840,7 +881,7 @@ export default function SyncPage() {
                     已开启
                   </Badge>
                   <Text size="sm" c="dimmed">
-                    Bot 将在每日凌晨自动更新成绩
+                    Bot 将在今日凌晨自动更新成绩，请勿解除好友关系
                   </Text>
                 </Group>
                 <Button
@@ -858,28 +899,125 @@ export default function SyncPage() {
         )}
 
         {idleUpdateStatus?.pendingJob && !idleUpdateStatus?.enabled && (
-          <Card withBorder padding="md" radius="md" style={{
-            borderLeft: "4px solid var(--mantine-color-blue-6)",
-          }}>
-            <Group gap="xs">
-              <Loader size="xs" />
-              <Text size="sm">
-                闲时更新任务进行中，Bot 正在添加好友，请接受好友请求...
-              </Text>
-            </Group>
+          <Card
+            withBorder
+            padding="md"
+            radius="md"
+            style={{
+              borderLeft: "4px solid var(--mantine-color-blue-6)",
+            }}
+          >
+            <Stack gap="sm">
+              <Group gap="xs">
+                <Loader size="xs" />
+                <Text size="sm" fw={500}>
+                  {idleUpdateStatus.activeJob?.jobType === "idle_add_friend"
+                    ? idleUpdateStatus.activeJob?.stage === "wait_acceptance"
+                      ? "Bot 已发送好友申请，请登录 NET 接受好友请求"
+                      : idleUpdateStatus.activeJob?.stage === "send_request"
+                        ? "Bot 正在发送好友申请，请稍候..."
+                        : "闲时更新任务进行中..."
+                    : idleUpdateStatus.activeJob?.jobType ===
+                        "idle_update_score"
+                      ? idleUpdateStatus.activeJob?.stage === "update_score"
+                        ? "Bot 正在更新成绩..."
+                        : "闲时更新任务进行中..."
+                      : "闲时更新任务进行中..."}
+                </Text>
+              </Group>
+              {idleUpdateStatus.activeJob?.jobType === "idle_add_friend" &&
+                idleUpdateStatus.activeJob?.stage === "wait_acceptance" &&
+                idleUpdateStatus.activeJob?.friendRequestSentAt && (
+                  <Text size="sm" c="red" fw={700}>
+                    若申请时间不是{" "}
+                    {idleUpdateStatus.activeJob.friendRequestSentAt}
+                    ，请勿接受，可能是他人尝试登录！
+                  </Text>
+                )}
+              {idleUpdateStatus.activeJob?.jobType === "idle_update_score" &&
+                idleUpdateStatus.activeJob?.stage === "update_score" &&
+                idleUpdateStatus.activeJob?.scoreProgress && (
+                  <Stack gap="xs">
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" c="dimmed">
+                        更新进度
+                      </Text>
+                      <Text size="sm" fw={600}>
+                        {
+                          idleUpdateStatus.activeJob.scoreProgress
+                            .completedDiffs.length
+                        }{" "}
+                        / {idleUpdateStatus.activeJob.scoreProgress.totalDiffs}
+                      </Text>
+                    </Group>
+                    <Progress
+                      value={
+                        idleUpdateStatus.activeJob.scoreProgress.totalDiffs > 0
+                          ? (idleUpdateStatus.activeJob.scoreProgress
+                              .completedDiffs.length /
+                              idleUpdateStatus.activeJob.scoreProgress
+                                .totalDiffs) *
+                            100
+                          : 0
+                      }
+                      animated
+                      size="md"
+                      radius="xl"
+                    />
+                    {idleUpdateStatus.activeJob.scoreProgress.completedDiffs
+                      .length > 0 && (
+                      <Group gap="xs" mt={4}>
+                        {idleUpdateStatus.activeJob.scoreProgress.completedDiffs.map(
+                          (diff) => (
+                            <Badge
+                              radius="md"
+                              key={diff}
+                              size="sm"
+                              variant="filled"
+                              color={
+                                diff === 0
+                                  ? "green"
+                                  : diff === 1
+                                    ? "yellow"
+                                    : diff === 2
+                                      ? "red"
+                                      : diff === 3
+                                        ? "grape"
+                                        : diff === 4
+                                          ? "violet"
+                                          : "pink"
+                              }
+                            >
+                              {DIFFICULTY_NAMES[diff] ?? `Diff ${diff}`}
+                            </Badge>
+                          ),
+                        )}
+                      </Group>
+                    )}
+                  </Stack>
+                )}
+            </Stack>
           </Card>
         )}
 
         {!idleUpdateStatus?.enabled && !idleUpdateStatus?.pendingJob && (
-          <Button
-            variant="light"
-            leftSection={<IconClock size={16} />}
-            onClick={enableIdleUpdate}
-            loading={idleUpdateLoading}
-            disabled={!profile?.friendCode || idleUpdateLoading}
-          >
-            开启闲时更新
-          </Button>
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" align="center">
+              <Text size="sm" c="dimmed">
+                开启后 Bot 将在每日凌晨自动更新你的成绩
+              </Text>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconClock size={14} />}
+                onClick={enableIdleUpdate}
+                loading={idleUpdateLoading}
+                disabled={!profile?.friendCode || idleUpdateLoading}
+              >
+                开启
+              </Button>
+            </Group>
+          </Card>
         )}
       </Stack>
 

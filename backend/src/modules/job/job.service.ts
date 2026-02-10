@@ -421,4 +421,24 @@ export class JobService {
     });
     return count > 0;
   }
+
+  async getActiveIdleJob(friendCode: string) {
+    const job = await this.jobModel
+      .findOne({
+        friendCode,
+        jobType: { $in: ['idle_add_friend', 'idle_update_score'] },
+        status: { $in: ['queued', 'processing'] },
+      })
+      .sort({ createdAt: -1 });
+    if (!job) return null;
+    return {
+      id: job.id,
+      jobType: job.jobType,
+      status: job.status,
+      stage: job.stage,
+      scoreProgress: job.scoreProgress,
+      friendRequestSentAt: job.friendRequestSentAt,
+      pickedAt: job.pickedAt,
+    };
+  }
 }

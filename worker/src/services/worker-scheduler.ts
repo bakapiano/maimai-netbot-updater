@@ -19,7 +19,6 @@ import { cleanupService } from "./cleanup-service.ts";
 function loadConfigFromEnv(): {
   jobHandlerConfig: JobHandlerConfig;
   maxProcessJobs: number;
-  tickIntervalMs: number;
 } {
   const useMockResult =
     process.env.USE_MOCK_RESULT === "1" ||
@@ -57,7 +56,6 @@ function loadConfigFromEnv(): {
       heartbeatIntervalMs,
     },
     maxProcessJobs,
-    tickIntervalMs: WORKER_DEFAULTS.tickIntervalMs,
   };
 }
 
@@ -95,10 +93,7 @@ export class WorkerScheduler {
       return;
     }
 
-    this.intervalId = setInterval(
-      () => this.tick(),
-      this.config.tickIntervalMs,
-    );
+    this.intervalId = setInterval(() => this.tick(), 5000);
 
     // 启动 Cookie 健康检查
     this.startCookieHealthCheck();

@@ -1,6 +1,7 @@
 import { Button, Card, Group, Stack, Text } from "@mantine/core";
 import {
   IconArrowsExchange,
+  IconClock,
   IconDatabase,
   IconMusic,
   IconPhoto,
@@ -17,6 +18,9 @@ export default function AdminSyncPage() {
 
   const [musicSyncing, setMusicSyncing] = useState(false);
   const [musicSyncResult, setMusicSyncResult] = useState("");
+
+  const [idleUpdateTriggering, setIdleUpdateTriggering] = useState(false);
+  const [idleUpdateResult, setIdleUpdateResult] = useState("");
 
   const [dataSource, setDataSource] = useState<"diving-fish" | "lxns" | null>(
     null,
@@ -100,6 +104,26 @@ export default function AdminSyncPage() {
     }
   }, [password]);
 
+  const triggerIdleUpdate = useCallback(async () => {
+    if (!password) return;
+    setIdleUpdateTriggering(true);
+    setIdleUpdateResult("");
+    const res = await adminFetch<{
+      ok: boolean;
+      totalUsers: number;
+      created: number;
+      failed: number;
+    }>("/api/admin/trigger-idle-update", password, { method: "POST" });
+    setIdleUpdateTriggering(false);
+    if (res.ok && res.data) {
+      setIdleUpdateResult(
+        `完成: 总用户 ${res.data.totalUsers}, 创建 ${res.data.created} 个任务, 失败 ${res.data.failed}`,
+      );
+    } else {
+      setIdleUpdateResult(`失败: ${res.error}`);
+    }
+  }, [password]);
+
   useEffect(() => {
     if (dataSource === null) {
       void loadDataSource();
@@ -146,6 +170,24 @@ export default function AdminSyncPage() {
             {musicSyncResult && (
               <Text size="sm" c="dimmed">
                 {musicSyncResult}
+              </Text>
+            )}
+          </div>
+
+          <div>
+            <Group gap="sm" mb={4}>
+              <Button
+                variant="light"
+                leftSection={<IconClock size={16} />}
+                onClick={triggerIdleUpdate}
+                loading={idleUpdateTriggering}
+              >
+                触发闲时更新
+              </Button>
+            </Group>
+            {idleUpdateResult && (
+              <Text size="sm" c="dimmed">
+                {idleUpdateResult}
               </Text>
             )}
           </div>

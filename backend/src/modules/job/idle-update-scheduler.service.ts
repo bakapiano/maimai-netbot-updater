@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+
 import { ConfigService } from '@nestjs/config';
 import { JobService } from './job.service';
 import { UsersService } from '../users/users.service';
@@ -61,47 +67,109 @@ export class IdleUpdateSchedulerService
     }
 
     this.lastTriggeredDate = dateKey;
-    this.logger.log(`Triggering idle update jobs for ${dateKey}`);
+    await this.triggerNow();
+  }
+
+  /** 轮询间隔(ms) */
+  private readonly POLL_INTERVAL_MS = 3000;
+  /** 单个 job 最大等待时间(ms) */
+  private readonly JOB_TIMEOUT_MS = 5 * 60 * 1000;
+
+  /**
+   * 手动 / 定时 触发闲时更新，返回执行结果摘要。
+   */
+  async triggerNow(): Promise<{
+    totalUsers: number;
+    created: number;
+    failed: number;
+  }> {
+    this.logger.log('Triggering idle update jobs');
 
     const users = await this.usersService.getIdleUpdateUsers();
     if (!users.length) {
       this.logger.log('No users with idle update enabled');
-      return;
+      return { totalUsers: 0, created: 0, failed: 0 };
     }
 
     let created = 0;
     let failed = 0;
 
-    for (const user of users) {
-      try {
-        await this.jobService.create({
-          friendCode: user.friendCode,
-          skipUpdateScore: false,
-          jobType: 'idle_update_score',
-        });
+    // 按 concurrency 分批处理
+    for (let i = 0; i < users.length; i += this.concurrency) {
+      const batch = users.slice(i, i + this.concurrency);
+      const batchJobIds: string[] = [];
 
-        // 清除用户的闲时更新标记
-        const userId = String(user._id);
-        await this.usersService.update(userId, {
-          idleUpdateBotFriendCode: null,
-        });
+      // 1) 创建这一批的所有 job
+      for (const user of batch) {
+        try {
+          const { jobId } = await this.jobService.create({
+            friendCode: user.friendCode,
+            skipUpdateScore: false,
+            jobType: 'idle_update_score',
+          });
 
-        created++;
-      } catch (err) {
-        failed++;
-        this.logger.warn(
-          `Failed to create idle update job for ${user.friendCode}: ${err}`,
-        );
+          // 清除用户的闲时更新标记
+          const userId = String(user._id);
+          await this.usersService.update(userId, {
+            idleUpdateBotFriendCode: null,
+          });
+
+          batchJobIds.push(jobId);
+          created++;
+        } catch (err) {
+          failed++;
+          this.logger.warn(
+            `Failed to create idle update job for ${user.friendCode}: ${err}`,
+          );
+        }
       }
 
-      // 控制并发度 - 每批 concurrency 个后等待一下
-      if (created > 0 && created % this.concurrency === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 2) 等待这一批所有 job 完成后再继续下一批
+      if (batchJobIds.length > 0 && i + this.concurrency < users.length) {
+        this.logger.debug(
+          `Waiting for batch of ${batchJobIds.length} jobs to complete before next batch...`,
+        );
+        await this.waitForJobsToFinish(batchJobIds);
       }
     }
 
     this.logger.log(
       `Idle update complete: ${created} jobs created, ${failed} failed out of ${users.length} users`,
     );
+
+    return { totalUsers: users.length, created, failed };
+  }
+
+  /**
+   * 轮询等待一组 job 全部进入终态 (completed / failed / canceled)
+   */
+  private async waitForJobsToFinish(jobIds: string[]): Promise<void> {
+    const FINAL_STATUSES = new Set(['completed', 'failed', 'canceled']);
+    const pending = new Set(jobIds);
+    const deadline = Date.now() + this.JOB_TIMEOUT_MS;
+
+    while (pending.size > 0 && Date.now() < deadline) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.POLL_INTERVAL_MS),
+      );
+
+      for (const jobId of [...pending]) {
+        try {
+          const job = await this.jobService.get(jobId);
+          if (FINAL_STATUSES.has(job.status)) {
+            pending.delete(jobId);
+          }
+        } catch {
+          // job 查不到也视为完成
+          pending.delete(jobId);
+        }
+      }
+    }
+
+    if (pending.size > 0) {
+      this.logger.warn(
+        `Timed out waiting for ${pending.size} jobs: ${[...pending].join(', ')}`,
+      );
+    }
   }
 }

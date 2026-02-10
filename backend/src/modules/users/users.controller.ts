@@ -145,8 +145,7 @@ export class UsersController {
     let selectedBot: string | null = null;
     for (const bot of availableBots) {
       const count = await this.users.countIdleUpdateByBot(bot.friendCode);
-      const reportedCount =
-        this.botStatus.getFriendCount(bot.friendCode) ?? 0;
+      const reportedCount = this.botStatus.getFriendCount(bot.friendCode) ?? 0;
       if (count < limit && reportedCount < limit) {
         selectedBot = bot.friendCode;
         break;
@@ -192,12 +191,13 @@ export class UsersController {
     }
 
     const user = await this.users.getById(userId);
-    const hasActiveJob = await this.jobs.hasActiveIdleJob(user.friendCode);
+    const activeJob = await this.jobs.getActiveIdleJob(user.friendCode);
 
     return {
       enabled: !!user.idleUpdateBotFriendCode,
       botFriendCode: user.idleUpdateBotFriendCode ?? null,
-      pendingJob: hasActiveJob,
+      pendingJob: !!activeJob,
+      activeJob,
     };
   }
 }

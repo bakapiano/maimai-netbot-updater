@@ -16,14 +16,12 @@
         .status-row { margin: 0.5rem 0; }
     </style>
     <script>
-        let checkInterval;
         let statusCheckInterval;
-        let currentUserFriendCode = null;
-        let redirecting = false;
-        let jobServiceBase = "";
+        let cookieCheckInterval;
         const healthRetryDelay = 2000;
         let backendHealthy = false;
         let proxyConfigured = false;
+        let authTriggered = false;
 
         const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -74,49 +72,48 @@
             }
         }
 
+        async function checkCookieStatus() {
+            try {
+                const response = await fetch('/api/status', { cache: 'no-store' });
+                const data = await response.json();
+                
+                const indicator = document.getElementById('cookieStatusIndicator');
+                const status = document.getElementById('cookieStatusText');
+
+                if (data.authOngoing) {
+                    indicator.className = 'status-indicator status-checking';
+                    status.innerText = 'Auth in progress...';
+                    authTriggered = true;
+                } else if (data.expired) {
+                    indicator.className = 'status-indicator status-unhealthy';
+                    status.innerText = data.friendCode
+                        ? `Expired - Bot ${data.friendCode}`
+                        : 'No bot cookie found';
+                    // Auto-start auth when cookie is expired and system is ready
+                    if (backendHealthy && proxyConfigured && !authTriggered) {
+                        authTriggered = true;
+                        startAuth();
+                    }
+                } else {
+                    indicator.className = 'status-indicator status-healthy';
+                    status.innerText = `Valid - Bot ${data.friendCode}`;
+                    authTriggered = false;
+                }
+            } catch (err) {
+                document.getElementById('cookieStatusIndicator').className = 'status-indicator status-unhealthy';
+                document.getElementById('cookieStatusText').innerText = 'Error: ' + err.message;
+            }
+        }
+
         async function checkSystemStatus() {
-            await Promise.all([checkBackendHealth(), checkProxyConfiguration()]);
+            await Promise.all([checkBackendHealth(), checkProxyConfiguration(), checkCookieStatus()]);
         }
 
         function startStatusChecking() {
             checkSystemStatus();
             if (!statusCheckInterval) {
-                statusCheckInterval = setInterval(checkSystemStatus, 5000);
+                statusCheckInterval = setInterval(checkSystemStatus, 5_000);
             }
-        }
-
-        function stopStatusChecking() {
-            if (statusCheckInterval) {
-                clearInterval(statusCheckInterval);
-                statusCheckInterval = null;
-            }
-        }
-
-        async function resolveJobServiceBase() {
-            if (jobServiceBase) {
-                return jobServiceBase;
-            }
-            try {
-                const response = await fetch('/api/job-service/config');
-                if (!response.ok) {
-                    throw new Error('Failed to resolve job service config');
-                }
-                const data = await response.json();
-                if (!data.baseUrl) {
-                    throw new Error('Job service base URL is not configured');
-                }
-                jobServiceBase = data.baseUrl.replace(/\/$/, '');
-                return jobServiceBase;
-            } catch (err) {
-                console.error(err);
-                throw err;
-            }
-        }
-
-
-        function getQueryParam(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
         }
 
         async function waitForHealth() {
@@ -138,12 +135,12 @@
         }
 
         async function startAuth() {
-            // 检查后端健康状态和代理配置
             if (!backendHealthy || !proxyConfigured) {
                 document.getElementById('status').innerText = "Cannot start auth: Backend or proxy not ready";
                 return;
             }
 
+            authTriggered = true;
             try {
                 await waitForHealth();
                 const response = await fetch('/api/auth');
@@ -151,137 +148,18 @@
                 if (data.authUrl) {
                     window.location.href = data.authUrl;
                 } else {
+                    authTriggered = false;
                     alert("Failed to get auth URL");
                 }
             } catch (e) {
+                authTriggered = false;
                 console.error(e);
                 alert("Error starting auth");
             }
         }
 
-        async function checkStatus() {
-            if (!currentUserFriendCode || redirecting) return;
-
-            try {
-                const response = await fetch(`/api/status?friendCode=${currentUserFriendCode}`);
-                const data = await response.json();
-                
-                if (data.expired) {
-                    document.getElementById('status').innerText = "Cookie expired or not found. Please re-auth.";
-                    document.getElementById('authSection').style.display = 'block';
-                    redirecting = true;
-                    if (checkInterval) {
-                        clearInterval(checkInterval);
-                        checkInterval = null;
-                    }
-                    await startAuth();
-                } else {
-                    document.getElementById('status').innerText = `Cookie is valid for user ${currentUserFriendCode}`;
-                    document.getElementById('authSection').style.display = 'none';
-                    if (data.cookie) {
-                        document.getElementById('cookieInfo').innerText = JSON.stringify(data.cookie, null, 2);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to check status", e);
-                document.getElementById('status').innerText = "Failed to check status";
-            }
-        }
-
-        function toggleAutoCheck() {
-            const checkbox = document.getElementById('autoCheck');
-            if (checkbox.checked) {
-                checkStatus();
-                if (!checkInterval) {
-                    checkInterval = setInterval(checkStatus, 5000);
-                }
-            } else {
-                if (checkInterval) {
-                    clearInterval(checkInterval);
-                    checkInterval = null;
-                }
-            }
-        }
-
-        async function createJob() {
-            const friendCode = document.getElementById('friendCode').value;
-            if (!friendCode) {
-                alert("Please enter a Friend Code");
-                return;
-            }
-
-            const skipUpdateScore = document.getElementById('skipUpdateScore')?.checked ?? false;
-
-            let base;
-            try {
-                base = await resolveJobServiceBase();
-            } catch (err) {
-                document.getElementById('createJobResult').innerText = 'Error: ' + err;
-                return;
-            }
-
-            try {
-                const res = await fetch(`${base}/api/job/create`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ friendCode, skipUpdateScore })
-                });
-                const data = await res.json();
-                document.getElementById('createJobResult').innerText = JSON.stringify(data, null, 2);
-                if (data.jobId) {
-                    document.getElementById('jobId').value = data.jobId;
-                }
-            } catch (e) {
-                document.getElementById('createJobResult').innerText = 'Error: ' + e;
-            }
-        }
-
-        async function getJobStatus() {
-            const jobId = document.getElementById('jobId').value;
-            if (!jobId) {
-                alert("Please enter a Job ID");
-                return;
-            }
-            let base;
-            try {
-                base = await resolveJobServiceBase();
-            } catch (err) {
-                document.getElementById('jobStatusResult').innerText = 'Error: ' + err;
-                return;
-            }
-
-            try {
-                const res = await fetch(`${base}/api/job/` + jobId);
-                const data = await res.json();
-                document.getElementById('jobStatusResult').innerText = JSON.stringify(data, null, 2);
-            } catch (e) {
-                document.getElementById('jobStatusResult').innerText = 'Error: ' + e;
-            }
-        }
-
         window.onload = () => {
-            currentUserFriendCode = getQueryParam('friendCode');
-            
-            // 开始系统状态检查
             startStatusChecking();
-            
-            if (currentUserFriendCode) {
-                document.getElementById('userInfo').innerText = `Logged in as: ${currentUserFriendCode}`;
-                document.getElementById('authSection').style.display = 'none';
-                toggleAutoCheck();
-            } else {
-                document.getElementById('userInfo').innerText = "Not logged in";
-                document.getElementById('status').innerText = "Please authenticate first. Waiting for backend and proxy...";
-                document.getElementById('authSection').style.display = 'block';
-                
-                // 等待后端和代理就绪后再自动开始认证
-                const waitForReady = setInterval(() => {
-                    if (backendHealthy && proxyConfigured) {
-                        clearInterval(waitForReady);
-                        startAuth();
-                    }
-                }, 1000);
-            }
         };
     </script>
 </head>
@@ -298,45 +176,18 @@
             <span class="status-indicator status-checking" id="proxyConfigIndicator"></span>
             <strong>Proxy Configuration:</strong> <span id="proxyConfigStatus">Checking...</span>
         </div>
+        <div class="status-row">
+            <span class="status-indicator status-checking" id="cookieStatusIndicator"></span>
+            <strong>Bot Cookie:</strong> <span id="cookieStatusText">Checking...</span>
+        </div>
     </div>
     
     <div class="section">
-        <h2>User Info</h2>
-        <div id="userInfo">Loading...</div>
-        <div id="authSection" style="margin-top: 1rem;">
+        <h2>Auth</h2>
+        <div id="status">Checking status...</div>
+        <div style="margin-top: 1rem;">
             <button onclick="startAuth()">Start Auth (Login)</button>
         </div>
-    </div>
-
-    <div class="section">
-        <h2>Status</h2>
-        <div id="status">Checking status...</div>
-        <pre id="cookieInfo"></pre>
-        <div class="row">
-            <label>
-                <input type="checkbox" id="autoCheck" onchange="toggleAutoCheck()" checked> Auto Check Status (5s)
-            </label>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>Job Manager</h2>
-        <div class="row">
-            <label>Friend Code: <input type="text" id="friendCode" placeholder="Enter Friend Code" value="634142510810999"></label>
-            <button onclick="createJob()">Create Job</button>
-        </div>
-        <div class="row">
-            <label>
-                <input type="checkbox" id="skipUpdateScore"> Skip Update Score
-            </label>
-        </div>
-        <pre id="createJobResult">Job creation result will appear here...</pre>
-
-        <div class="row">
-            <label>Job ID: <input type="text" id="jobId" placeholder="Job ID"></label>
-            <button onclick="getJobStatus()">Get Job Status</button>
-        </div>
-        <pre id="jobStatusResult">Job status will appear here...</pre>
     </div>
 </body>
 </html>

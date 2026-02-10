@@ -421,10 +421,10 @@ export default function LoginPage() {
                         label={
                           <Group gap={4}>
                             <IconClock size={14} />
-                            <Text size="sm">使用闲时更新（推荐）</Text>
+                            <Text size="sm">使用闲时更新</Text>
                           </Group>
                         }
-                        description="Bot 先添加好友，在凌晨空闲时段自动更新成绩"
+                        description="先与 Bot 成为好友，在凌晨空闲时段自动更新成绩"
                         checked={useIdleUpdate}
                         onChange={(e) =>
                           setUseIdleUpdate(e.currentTarget.checked)

@@ -1,6 +1,7 @@
 import {
   AppShell,
   Box,
+  Burger,
   Button,
   Card,
   Container,
@@ -10,6 +11,7 @@ import {
   Text,
   ThemeIcon,
   Title,
+  useMantineColorScheme,
 } from "@mantine/core";
 import {
   IconBug,
@@ -18,9 +20,10 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { adminFetch, useAdminPassword, type AdminStats } from "./adminUtils";
+import { useDisclosure } from "@mantine/hooks";
 
 type AdminPageMeta = {
   label: string;
@@ -64,6 +67,9 @@ export default function AdminLayout() {
   const [error, setError] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
+  const [opened, { toggle, close }] = useDisclosure(false);
+  const { colorScheme } = useMantineColorScheme();
+  const touchStartX = useRef<number | null>(null);
 
   const verifyPassword = useCallback(async () => {
     if (!inputPassword.trim()) {
@@ -140,10 +146,26 @@ export default function AdminLayout() {
       navbar={{
         width: 200,
         breakpoint: "sm",
+        collapsed: { mobile: !opened },
       }}
       padding="md"
     >
-      <AppShell.Navbar p="sm" withBorder>
+      <AppShell.Navbar
+        p="sm"
+        withBorder
+        onTouchStart={(event) => {
+          touchStartX.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          const startX = touchStartX.current;
+          touchStartX.current = null;
+          if (startX === null) return;
+          const endX = event.changedTouches[0]?.clientX ?? startX;
+          if (startX - endX > 50) {
+            close();
+          }
+        }}
+      >
         <Stack gap={4} style={{ flex: 1 }}>
           <Text size="sm" fw={700} c="dimmed" mb="xs" px="sm">
             管理后台
@@ -160,6 +182,7 @@ export default function AdminLayout() {
                 </ThemeIcon>
               }
               active={location.pathname === page.to}
+              onClick={close}
             />
           ))}
         </Stack>
@@ -182,6 +205,33 @@ export default function AdminLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main>
+        <Box
+          hiddenFrom="sm"
+          style={{
+            position: "fixed",
+            left: 16,
+            bottom: 16,
+            zIndex: 2000,
+          }}
+        >
+          <Box
+            w={48}
+            h={48}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor:
+                colorScheme === "dark"
+                  ? "var(--mantine-color-dark-4)"
+                  : "var(--mantine-color-gray-2)",
+              borderRadius: 999,
+              boxShadow: "var(--mantine-shadow-sm)",
+            }}
+          >
+            <Burger opened={opened} onClick={toggle} size="sm" />
+          </Box>
+        </Box>
         <Outlet context={{ password }} />
       </AppShell.Main>
     </AppShell>

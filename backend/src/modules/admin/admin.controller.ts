@@ -12,6 +12,7 @@ import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
 import { BotStatusService } from './bot-status.service';
 import { JobApiLogService } from '../job/job-api-log.service';
+import { IdleUpdateSchedulerService } from '../job/idle-update-scheduler.service';
 
 @Controller('admin')
 export class AdminController {
@@ -19,6 +20,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly botStatusService: BotStatusService,
     private readonly apiLogService: JobApiLogService,
+    private readonly idleUpdateScheduler: IdleUpdateSchedulerService,
   ) {}
 
   /**
@@ -125,5 +127,12 @@ export class AdminController {
   @UseGuards(AdminGuard)
   async getJobApiLogs(@Param('jobId') jobId: string) {
     return await this.apiLogService.getLogsByJobId(jobId);
+  }
+
+  @Post('trigger-idle-update')
+  @UseGuards(AdminGuard)
+  async triggerIdleUpdate() {
+    const result = await this.idleUpdateScheduler.triggerNow();
+    return { ok: true, ...result };
   }
 }

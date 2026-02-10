@@ -7,12 +7,48 @@ import { CookieJar } from "tough-cookie";
 import { cookieStore } from "./services/cookie-store.ts";
 
 /**
+ * 认证超时时间（毫秒）
+ */
+const AUTH_TIMEOUT_MS = 60_000; // 1 分钟
+
+/**
  * 运行时状态
  * 用于存储临时的运行时变量
  */
 export const runtimeState = {
   /** 当前 OAuth 认证 URL（供 proxy 使用） */
   authUrl: "",
+
+  /** 正在进行中的认证状态 */
+  _ongoingAuth: null as { startedAt: number; timer: ReturnType<typeof setTimeout> } | null,
+
+  /** 标记认证开始 */
+  startAuth(): void {
+    // 清除旧的 timer
+    if (runtimeState._ongoingAuth) {
+      clearTimeout(runtimeState._ongoingAuth.timer);
+    }
+    const timer = setTimeout(() => {
+      console.log("[Auth] Auth timed out after 1 minute");
+      runtimeState._ongoingAuth = null;
+    }, AUTH_TIMEOUT_MS);
+    runtimeState._ongoingAuth = { startedAt: Date.now(), timer };
+    console.log("[Auth] Auth started");
+  },
+
+  /** 标记认证结束 */
+  finishAuth(): void {
+    if (runtimeState._ongoingAuth) {
+      clearTimeout(runtimeState._ongoingAuth.timer);
+      runtimeState._ongoingAuth = null;
+      console.log("[Auth] Auth finished");
+    }
+  },
+
+  /** 是否正在进行认证 */
+  get isAuthOngoing(): boolean {
+    return runtimeState._ongoingAuth !== null;
+  },
 };
 
 /**
