@@ -14,8 +14,10 @@ import { JobController } from './job.controller';
 import { JobService } from './job.service';
 import { JobTempCacheService } from './job-temp-cache.service';
 import { JobApiLogService } from './job-api-log.service';
+import { IdleUpdateSchedulerService } from './idle-update-scheduler.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SyncModule } from '../sync/sync.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -26,9 +28,15 @@ import { SyncModule } from '../sync/sync.module';
     ]),
     forwardRef(() => SyncModule),
     forwardRef(() => AuthModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [JobController],
-  providers: [JobService, JobTempCacheService, JobApiLogService],
+  providers: [
+    JobService,
+    JobTempCacheService,
+    JobApiLogService,
+    IdleUpdateSchedulerService,
+  ],
   exports: [JobService, JobTempCacheService, JobApiLogService],
 })
 export class JobModule {}

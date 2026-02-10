@@ -50,6 +50,7 @@ export class UsersService {
       divingFishImportToken?: string | null;
       lxnsImportToken?: string | null;
       profile?: UserNetProfile | null;
+      idleUpdateBotFriendCode?: string | null;
     },
   ) {
     if (!isValidObjectId(id)) {
@@ -66,6 +67,10 @@ export class UsersService {
     if ('profile' in input) {
       updateDoc.profile = input.profile ?? null;
     }
+    if ('idleUpdateBotFriendCode' in input) {
+      updateDoc.idleUpdateBotFriendCode =
+        input.idleUpdateBotFriendCode ?? null;
+    }
 
     const updated = await this.userModel.findByIdAndUpdate(id, updateDoc, {
       new: true,
@@ -76,5 +81,24 @@ export class UsersService {
     }
 
     return updated.toObject();
+  }
+
+  /**
+   * 获取所有开启了闲时更新的用户
+   */
+  async getIdleUpdateUsers() {
+    const users = await this.userModel
+      .find({ idleUpdateBotFriendCode: { $ne: null } })
+      .lean();
+    return users;
+  }
+
+  /**
+   * 统计某个 bot 有多少用户正在使用它做闲时更新
+   */
+  async countIdleUpdateByBot(botFriendCode: string): Promise<number> {
+    return this.userModel.countDocuments({
+      idleUpdateBotFriendCode: botFriendCode,
+    });
   }
 }

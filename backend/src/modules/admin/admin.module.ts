@@ -32,5 +32,6 @@ import { JobModule } from '../job/job.module';
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminGuard, BotStatusService],
+  exports: [BotStatusService],
 })
 export class AdminModule {}

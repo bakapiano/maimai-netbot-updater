@@ -31,6 +31,7 @@ export class AdminController {
       bots: {
         friendCode: string;
         available: boolean;
+        friendCount?: number;
       }[];
     },
   ) {

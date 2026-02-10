@@ -17,10 +17,10 @@ export interface BotStatus {
 export class BotStatusService implements OnModuleDestroy {
   private readonly logger = new Logger(BotStatusService.name);
 
-  /** Bot 状态: friendCode -> { available, lastReportedAt } */
+  /** Bot 状态: friendCode -> { available, lastReportedAt, friendCount } */
   private readonly botMap = new Map<
     string,
-    { available: boolean; lastReportedAt: Date }
+    { available: boolean; lastReportedAt: Date; friendCount: number | null }
   >();
 
   /** 定期清理不可用 Bot 任务的定时器 */
@@ -49,12 +49,13 @@ export class BotStatusService implements OnModuleDestroy {
   /**
    * Worker 上报 Bot 状态
    */
-  report(bots: { friendCode: string; available: boolean }[]): void {
+  report(bots: { friendCode: string; available: boolean; friendCount?: number }[]): void {
     const now = new Date();
     for (const bot of bots) {
       this.botMap.set(bot.friendCode, {
         available: bot.available,
         lastReportedAt: now,
+        friendCount: bot.friendCount ?? null,
       });
     }
     this.logger.log(
@@ -81,6 +82,14 @@ export class BotStatusService implements OnModuleDestroy {
     }
 
     return result;
+  }
+
+  /**
+   * 获取指定 bot 的好友数量
+   */
+  getFriendCount(friendCode: string): number | null {
+    const status = this.botMap.get(friendCode);
+    return status?.friendCount ?? null;
   }
 
   /**
