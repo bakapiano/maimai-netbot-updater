@@ -4,9 +4,9 @@
  */
 
 import { GameType, getAuthUrl } from "./services/index.ts";
+import { cookieStore, runtimeState } from "./state.ts";
 
 import config from "./config.ts";
-import { cookieStore } from "./state.ts";
 import express from "express";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -47,28 +47,33 @@ app.get("/api/auth", async (_req, res) => {
 });
 
 /**
- * 检查 Cookie 状态
+ * 检查 Cookie 状态（单 Bot 模式）
  */
-app.get("/api/status", async (req, res) => {
-  const friendCode = req.query.friendCode as string;
-  if (!friendCode) {
-    res.status(400).json({ error: "friendCode is required" });
-    return;
-  }
-
+app.get("/api/status", async (_req, res) => {
   try {
-    const cj = cookieStore.get(friendCode);
-    if (!cj) {
+    if (runtimeState.isAuthOngoing) {
+      res.json({ status: "ok", authOngoing: true, expired: false });
+      return;
+    }
+
+    const friendCodes = cookieStore.getAllBotFriendCodes();
+    if (friendCodes.length === 0) {
       res.json({ expired: true });
       return;
     }
 
+    const friendCode = friendCodes[0];
+    const cj = cookieStore.get(friendCode)!;
     const expired = await testCookieExpired(cj);
 
     if (expired) {
-      res.json({ expired: true });
+      res.json({ expired: true, friendCode });
     } else {
-      res.json({ expired: false, cookie: cookieStore.extractValues(cj) });
+      res.json({
+        expired: false,
+        friendCode,
+        cookie: cookieStore.extractValues(cj),
+      });
     }
   } catch (err) {
     console.error(err);

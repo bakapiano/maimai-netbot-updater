@@ -51,7 +51,7 @@ function checkHostInWhiteList(target: string | null): boolean {
 
 /**
  * OAuth 回调钩子
- * 拦截认证回调，交换 Cookie 并保存
+ * 拦截认证回调，立即返回重定向 URL，后台异步交换 Cookie
  */
 async function onAuthHook(href: string): Promise<string> {
   console.log("[Proxy] Successfully hook auth request!");
@@ -60,31 +60,40 @@ async function onAuthHook(href: string): Promise<string> {
   const key = String(url.parse(target, true).query.r);
 
   console.log(
-    `[Proxy] Found pending auth for key ${key}, exchanging cookie...`,
+    `[Proxy] Found pending auth for key ${key}, starting background cookie exchange...`,
   );
-  try {
-    const cj = await getCookieByAuthUrl(target);
-    const client = new MaimaiHttpClient(cj);
-    const friendCode = await client.getUserFriendCode();
 
-    if (friendCode) {
-      console.log(JSON.stringify(cj.toJSON(), null, 2));
-      cookieStore.set(friendCode, cj);
-      cookieStore.markValid(friendCode);
-      console.log(`[Proxy] Cookie updated successfully for ${friendCode}.`);
-      // 登录成功后立即上报 Bot 状态
-      reportBotStatus().catch((err) =>
-        console.error("[Proxy] Bot status report after login failed:", err),
-      );
-      return `${config.redirectUrl}?friendCode=${friendCode}`;
-    } else {
-      console.error("[Proxy] Failed to get friend code");
-      return config.redirectUrl;
+  // 标记认证开始
+  runtimeState.startAuth();
+
+  // 后台异步执行 cookie 交换，不阻塞代理响应
+  (async () => {
+    try {
+      const cj = await getCookieByAuthUrl(target);
+      const client = new MaimaiHttpClient(cj);
+      const friendCode = await client.getUserFriendCode();
+
+      if (friendCode) {
+        console.log(JSON.stringify(cj.toJSON(), null, 2));
+        cookieStore.set(friendCode, cj);
+        cookieStore.markValid(friendCode);
+        console.log(`[Proxy] Cookie updated successfully for ${friendCode}.`);
+        // 登录成功后立即上报 Bot 状态
+        reportBotStatus().catch((err) =>
+          console.error("[Proxy] Bot status report after login failed:", err),
+        );
+      } else {
+        console.error("[Proxy] Failed to get friend code");
+      }
+    } catch (e) {
+      console.error("[Proxy] Failed to exchange cookie", e);
+    } finally {
+      runtimeState.finishAuth();
     }
-  } catch (e) {
-    console.error("[Proxy] Failed to exchange cookie", e);
-    return config.redirectUrl;
-  }
+  })();
+
+  // 立即返回重定向 URL，不等待 cookie 交换完成
+  return config.redirectUrl;
 }
 
 /**

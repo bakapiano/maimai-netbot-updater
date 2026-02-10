@@ -19,7 +19,6 @@ import { cleanupService } from "./cleanup-service.ts";
 function loadConfigFromEnv(): {
   jobHandlerConfig: JobHandlerConfig;
   maxProcessJobs: number;
-  tickIntervalMs: number;
 } {
   const useMockResult =
     process.env.USE_MOCK_RESULT === "1" ||
@@ -57,7 +56,6 @@ function loadConfigFromEnv(): {
       heartbeatIntervalMs,
     },
     maxProcessJobs,
-    tickIntervalMs: WORKER_DEFAULTS.tickIntervalMs,
   };
 }
 
@@ -95,10 +93,7 @@ export class WorkerScheduler {
       return;
     }
 
-    this.intervalId = setInterval(
-      () => this.tick(),
-      this.config.tickIntervalMs,
-    );
+    this.intervalId = setInterval(() => this.tick(), 5000);
 
     // 启动 Cookie 健康检查
     this.startCookieHealthCheck();
@@ -317,20 +312,37 @@ export async function reportBotStatus(): Promise<void> {
   const allBots = cookieStore.getAllBotFriendCodes();
   if (!allBots.length) return;
 
-  const bots = allBots
-    .filter((friendCode) => !cookieStore.isExpired(friendCode))
-    .map((friendCode) => ({
-      friendCode,
-      available: true,
-    }));
+  const botsData: {
+    friendCode: string;
+    available: boolean;
+    friendCount?: number;
+  }[] = [];
 
-  if (!bots.length) return;
+  for (const friendCode of allBots) {
+    if (cookieStore.isExpired(friendCode)) continue;
+
+    let friendCount: number | undefined;
+    try {
+      const jar = cookieStore.get(friendCode);
+      if (jar) {
+        const client = new MaimaiHttpClient(jar);
+        const friends = await client.getFriendList();
+        friendCount = friends.length;
+      }
+    } catch {
+      // Best effort - don't fail the report
+    }
+
+    botsData.push({ friendCode, available: true, friendCount });
+  }
+
+  if (!botsData.length) return;
 
   try {
     const response = await fetch(buildUrl("/api/admin/bot-status"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bots }),
+      body: JSON.stringify({ bots: botsData }),
     });
 
     if (!response.ok) {

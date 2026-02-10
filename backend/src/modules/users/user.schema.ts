@@ -17,6 +17,9 @@ export class UserEntity {
 
   @Prop({ type: MongooseSchema.Types.Mixed, default: undefined })
   profile?: UserNetProfile | null;
+
+  @Prop({ type: String, default: null })
+  idleUpdateBotFriendCode!: string | null;
 }
 
 export type UserDocument = HydratedDocument<UserEntity>;

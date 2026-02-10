@@ -35,6 +35,8 @@ export const MAIMAI_URLS = {
 
   // 好友相关
   friendList: `${MAIMAI_BASE_URL}/index.php/friend/`,
+  friendListPage: (page: number) =>
+    `${MAIMAI_BASE_URL}/friend/pages/?idx=${page}`,
   friendInvite: `${MAIMAI_BASE_URL}/friend/invite/`,
   friendAccept: `${MAIMAI_BASE_URL}/friend/accept/`,
   friendAcceptAllow: `${MAIMAI_BASE_URL}/friend/accept/allow/`,
@@ -99,10 +101,10 @@ export const RETRY = {
   rateLimitMaxCount: 5,
   /** 限流 (567) Friend VS 最大重试次数 */
   rateLimitFriendVSMaxCount: 10,
-  /** 限流重试最小间隔 (ms) */
-  rateLimitMinDelayMs: 5_000,
+  /** 限流重试基础间隔 (ms)，实际间隔为 min(rateLimitBaseDelayMs * 2^attempt, rateLimitMaxDelayMs) + jitter */
+  rateLimitBaseDelayMs: 5_000,
   /** 限流重试最大间隔 (ms) */
-  rateLimitMaxDelayMs: 30_000,
+  rateLimitMaxDelayMs: 60_000,
 } as const;
 
 // ============================================================================
@@ -113,17 +115,15 @@ export const WORKER_DEFAULTS = {
   /** 心跳间隔 (ms) */
   heartbeatIntervalMs: 20_000,
   /** 最大并发处理任务数 */
-  maxProcessJobs: 16,
-  /** Worker tick 间隔 (ms) */
-  tickIntervalMs: 1000,
+  maxProcessJobs: 8,
   /** Friend VS 并发数 */
   friendVSConcurrency: 2,
   /** 清理任务间隔 (ms) - 默认 5 分钟 */
-  cleanupIntervalMs: 5 * 60 * 1000,
+  cleanupIntervalMs: 5 * 60_000,
   /** Cookie 健康检查间隔 (ms) - 默认 1 分钟 */
   cookieHealthCheckIntervalMs: 60 * 1000,
   /** Bot 状态上报间隔 (ms) - 默认 20 秒 */
-  botStatusReportIntervalMs: 20_000,
+  botStatusReportIntervalMs: 60_000,
 } as const;
 
 // ============================================================================

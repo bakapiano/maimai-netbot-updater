@@ -14,6 +14,7 @@ import type {
   JobResponse,
   JobStage,
   JobStatus,
+  JobType,
 } from './job.types';
 import { JobEntity } from './job.schema';
 
@@ -38,6 +39,7 @@ function toJobResponse(job: JobEntity): JobResponse {
   return {
     id: job.id,
     friendCode: job.friendCode,
+    jobType: job.jobType ?? 'immediate',
     skipUpdateScore: job.skipUpdateScore,
     botUserFriendCode: job.botUserFriendCode ?? null,
     friendRequestSentAt: job.friendRequestSentAt ?? null,
@@ -78,9 +80,14 @@ export class JobService {
     private readonly tempCacheService: JobTempCacheService,
   ) {}
 
-  async create(input: { friendCode: string; skipUpdateScore: boolean }) {
+  async create(input: {
+    friendCode: string;
+    skipUpdateScore: boolean;
+    jobType?: JobType;
+  }) {
     const id = randomUUID();
     const now = new Date();
+    const resolvedJobType: JobType = input.jobType ?? 'immediate';
 
     const recent = await this.jobModel
       .findOne({ friendCode: input.friendCode })
@@ -111,6 +118,7 @@ export class JobService {
     const created = await this.jobModel.create({
       id,
       friendCode: input.friendCode,
+      jobType: resolvedJobType,
       skipUpdateScore: input.skipUpdateScore,
       botUserFriendCode: null,
       friendRequestSentAt: null,
@@ -353,6 +361,11 @@ export class JobService {
 
     const filter = {
       skipUpdateScore: false,
+      $or: [
+        { jobType: 'immediate' },
+        { jobType: { $exists: false } },
+        { jobType: null },
+      ],
       createdAt: { $gte: oneHourAgo },
     };
 
@@ -394,6 +407,38 @@ export class JobService {
           ? Math.round((completedCount / totalCount) * 10000) / 100
           : 0,
       avgDuration,
+    };
+  }
+
+  /**
+   * 检查指定 friendCode 是否已有活跃的闲时更新任务
+   */
+  async hasActiveIdleJob(friendCode: string): Promise<boolean> {
+    const count = await this.jobModel.countDocuments({
+      friendCode,
+      jobType: { $in: ['idle_add_friend', 'idle_update_score'] },
+      status: { $in: ['queued', 'processing'] },
+    });
+    return count > 0;
+  }
+
+  async getActiveIdleJob(friendCode: string) {
+    const job = await this.jobModel
+      .findOne({
+        friendCode,
+        jobType: { $in: ['idle_add_friend', 'idle_update_score'] },
+        status: { $in: ['queued', 'processing'] },
+      })
+      .sort({ createdAt: -1 });
+    if (!job) return null;
+    return {
+      id: job.id,
+      jobType: job.jobType,
+      status: job.status,
+      stage: job.stage,
+      scoreProgress: job.scoreProgress,
+      friendRequestSentAt: job.friendRequestSentAt,
+      pickedAt: job.pickedAt,
     };
   }
 }

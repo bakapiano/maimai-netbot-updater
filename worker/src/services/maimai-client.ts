@@ -21,6 +21,7 @@ import type {
 } from "../types/index.ts";
 import {
   parseAcceptRequests,
+  parseFriendCount,
   parseFriendList,
   parseSentRequests,
   parseUserFriendCode,
@@ -36,14 +37,14 @@ import { recordApiLog } from "../job-api-log-client.ts";
  * 配置全局 HTTP Keep-Alive Agent
  * 复用 TCP/TLS 连接，减少频繁建连导致的 ECONNRESET
  */
-// setGlobalDispatcher(
-//   new Agent({
-//     keepAliveTimeout: 30_000,
-//     keepAliveMaxTimeout: 60_000,
-//     pipelining: 1,
-//     connections: 10,
-//   }),
-// );
+setGlobalDispatcher(
+  new Agent({
+    keepAliveTimeout: 30_000,
+    keepAliveMaxTimeout: 60_000,
+    pipelining: 1,
+    connections: 10,
+  }),
+);
 
 /**
  * Cookie 已过期错误
@@ -80,6 +81,37 @@ export class MaimaiHttpClient {
   /** 当前关联的 jobId，用于记录 API 调用日志 */
   jobId: string | null = null;
 
+  // =========================================================================
+  // 全局限流 —— 所有实例共享，保证相邻请求发起时间间隔 ≥ 1.5 秒以防限流
+  // =========================================================================
+  /** 请求发起间最小间隔（毫秒） */
+  private static readonly REQUEST_INTERVAL_MS = 1_500;
+  /** 上一次请求发起的时间戳 */
+  private static lastRequestStartTime = 0;
+  /** 限流锁：保证等待+更新时间戳的原子性 */
+  private static throttleLock: Promise<void> = Promise.resolve();
+
+  /**
+   * 等待直到距上次请求发起时间 ≥ REQUEST_INTERVAL_MS，然后标记本次发起时间
+   * 请求本身不串行，仅发起时间点串行排队
+   */
+  private static async waitForSlot(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      MaimaiHttpClient.throttleLock = MaimaiHttpClient.throttleLock.then(
+        async () => {
+          const now = Date.now();
+          const elapsed = now - MaimaiHttpClient.lastRequestStartTime;
+          const waitTime = MaimaiHttpClient.REQUEST_INTERVAL_MS - elapsed;
+          if (waitTime > 0) {
+            await sleep(waitTime);
+          }
+          MaimaiHttpClient.lastRequestStartTime = Date.now();
+          resolve();
+        },
+      );
+    });
+  }
+
   constructor(cookieJar: CookieJar) {
     this.cookieJar = cookieJar;
   }
@@ -115,10 +147,12 @@ export class MaimaiHttpClient {
 
     for (let i = 0; i < retryCount; i++) {
       try {
-        const result = (await fetchWithCookie(url, {
+        // 等待限流间隔后再发起请求（不串行，仅控制发起时间间隔）
+        await MaimaiHttpClient.waitForSlot();
+        const result = await (fetchWithCookie(url, {
           signal: AbortSignal.timeout(fetchTimeout),
           ...options,
-        })) as Response;
+        }) as Promise<Response>);
 
         const location = result.url;
         const clone = result.clone();
@@ -153,13 +187,13 @@ export class MaimaiHttpClient {
               `请求被限流 (HTTP 567)，已重试 ${rateLimitCount} 次仍未成功`,
             );
           }
-          const delay =
-            RETRY.rateLimitMinDelayMs +
-            Math.random() *
-              (RETRY.rateLimitMaxDelayMs - RETRY.rateLimitMinDelayMs);
-          console.log(
-            `[MaimaiClient] 限流等待 ${Math.round(delay)}ms 后重试...`,
+          const baseDelay = Math.min(
+            RETRY.rateLimitBaseDelayMs * Math.pow(2, rateLimitCount - 1),
+            RETRY.rateLimitMaxDelayMs,
           );
+          const jitter = Math.random() * baseDelay * 0.5;
+          const delay = Math.round(baseDelay + jitter);
+          console.log(`[MaimaiClient] 限流等待 ${delay}ms 后重试...`);
           await sleep(delay);
           i--; // 不消耗普通重试次数
           continue;
@@ -261,15 +295,46 @@ export class MaimaiHttpClient {
   // =========================================================================
 
   /**
-   * 获取好友列表
+   * 获取完整好友列表（自动翻页）
+   * 第一页返回最多 10 个好友，通过好友数计算总页数后逐页获取
    */
   async getFriendList(): Promise<string[]> {
     console.log(`[MaimaiClient] Start get friend list`);
-    const result = await this.fetchWithToken(MAIMAI_URLS.friendList);
-    const text = await result.text();
-    const ids = parseFriendList(text);
-    console.log(`[MaimaiClient] Done get friend list`);
-    return ids;
+
+    // 获取第一页
+    const firstResult = await this.fetchWithToken(MAIMAI_URLS.friendList);
+    const firstText = await firstResult.text();
+    const ids = parseFriendList(firstText);
+    const friendCount = parseFriendCount(firstText);
+
+    if (friendCount === null || friendCount <= 10) {
+      console.log(
+        `[MaimaiClient] Done get friend list (single page), count=${ids.length}`,
+      );
+      return ids;
+    }
+
+    // 计算需要翻页的页数: 第 2 页到第 ceil(friendCount/10)+1 页
+    const totalPages = Math.ceil(friendCount / 10) + 1;
+    console.log(
+      `[MaimaiClient] Friend count: ${friendCount}, fetching pages 2..${totalPages}`,
+    );
+
+    for (let page = 2; page <= totalPages; page++) {
+      const pageResult = await this.fetchWithToken(
+        MAIMAI_URLS.friendListPage(page),
+      );
+      const pageText = await pageResult.text();
+      const pageIds = parseFriendList(pageText);
+      ids.push(...pageIds);
+    }
+
+    // 去重
+    const uniqueIds = [...new Set(ids)];
+    console.log(
+      `[MaimaiClient] Done get friend list (${totalPages} pages), count=${uniqueIds.length}`,
+    );
+    return uniqueIds;
   }
 
   /**
@@ -447,6 +512,14 @@ export class MaimaiHttpClient {
     console.log(
       `[MaimaiClient] getFriendVS friendCode=${friendCode} scoreType=${scoreType} diff=${diff} cost=${cost}ms`,
     );
+
+    // 断言 Friend VS 页面包含有效的 friend_vs_block 内容
+    if (!text.includes('<div class="friend_vs_block">')) {
+      throw new Error(
+        "获取 Friend VS 页面失败：页面不包含 friend_vs_block，可能是好友没有添加成功",
+      );
+    }
+
     return text;
   }
 
