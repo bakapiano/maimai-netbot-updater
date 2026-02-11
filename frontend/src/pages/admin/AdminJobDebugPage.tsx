@@ -258,12 +258,31 @@ export default function AdminJobDebugPage() {
             <Stack gap="sm">
               <Group justify="space-between" align="center">
                 <Text fw={600} size="sm">
-                  API 调用日志 (Job: {selectedJobId.slice(0, 8)}...)
+                  任务详情 (Job: {selectedJobId.slice(0, 8)}...)
                 </Text>
                 <Badge variant="light" size="sm">
-                  {apiLogs.length} 条记录
+                  {apiLogs.length} 条 API 日志
                 </Badge>
               </Group>
+
+              {/* 完整 Job JSON */}
+              {(() => {
+                const selectedJob = jobs.find((j) => j.id === selectedJobId);
+                return selectedJob ? (
+                  <ScrollArea h={300}>
+                    <Code
+                      block
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        fontSize: 12,
+                      }}
+                    >
+                      {JSON.stringify(selectedJob.raw, null, 2)}
+                    </Code>
+                  </ScrollArea>
+                ) : null;
+              })()}
 
               {apiLogsLoading ? (
                 <Text size="sm" c="dimmed">

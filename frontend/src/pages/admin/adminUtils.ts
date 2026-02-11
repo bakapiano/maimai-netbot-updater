@@ -103,6 +103,7 @@ export interface SearchJobResult {
   createdAt: string;
   updatedAt: string;
   pickedAt: string | null;
+  raw: Record<string, unknown>;
 }
 
 export interface ApiLogEntry {

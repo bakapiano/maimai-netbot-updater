@@ -159,10 +159,7 @@ export class JobHandler {
   private async handleSendRequest(): Promise<void> {
     console.log(`[JobHandler] Job ${this.job.id}: Checking friend list...`);
 
-    const jobType = this.job.jobType ?? "immediate";
-
-    // 对于立即更新和闲时更新分数 job，如果用户有闲时更新的 bot 好友关系也需要先删除
-    if (!this.config.skipCleanUpFriend && jobType !== "idle_add_friend") {
+    if (!this.config.skipCleanUpFriend) {
       await this.friendManager.cleanUpFriend(this.job.friendCode);
     }
 
