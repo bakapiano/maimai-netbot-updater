@@ -140,6 +140,7 @@ export class MaimaiHttpClient {
     timeout?: number,
     retryCount: number = RETRY.defaultCount,
     rateLimitMaxCount: number = RETRY.rateLimitMaxCount,
+    responseAssertion?: (body: string) => void,
   ): Promise<Response> {
     const fetchWithCookie = makeFetchCookie(global.fetch, this.cookieJar);
     const fetchTimeout = timeout ?? config.fetchTimeOut ?? TIMEOUTS.default;
@@ -209,6 +210,11 @@ export class MaimaiHttpClient {
         const containerMsg = extractContainerRedMessage(body);
         if (containerMsg) {
           throw new Error(containerMsg);
+        }
+
+        // 调用方自定义断言（失败时抛出异常，由重试循环捕获）
+        if (responseAssertion) {
+          responseAssertion(body);
         }
 
         // 记录 API 调用日志
@@ -506,19 +512,19 @@ export class MaimaiHttpClient {
       TIMEOUTS.friendVS,
       RETRY.friendVSCount,
       RETRY.rateLimitFriendVSMaxCount,
+      (body) => {
+        if (!body.includes('<div class="friend_vs_block">')) {
+          throw new Error(
+            "获取 Friend VS 页面失败：页面不包含 friend_vs_block，可能是好友没有添加成功",
+          );
+        }
+      },
     );
     const text = await result.text();
     const cost = Date.now() - startTime;
     console.log(
       `[MaimaiClient] getFriendVS friendCode=${friendCode} scoreType=${scoreType} diff=${diff} cost=${cost}ms`,
     );
-
-    // 断言 Friend VS 页面包含有效的 friend_vs_block 内容
-    if (!text.includes('<div class="friend_vs_block">')) {
-      throw new Error(
-        "获取 Friend VS 页面失败：页面不包含 friend_vs_block，可能是好友没有添加成功",
-      );
-    }
 
     return text;
   }
