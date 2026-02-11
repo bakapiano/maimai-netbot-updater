@@ -92,6 +92,7 @@ export interface SearchJobResult {
   createdAt: string;
   updatedAt: string;
   pickedAt: string | null;
+  raw: Record<string, unknown>;
 }
 
 @Injectable()
@@ -528,21 +529,25 @@ export class AdminService {
     ]);
 
     return {
-      data: jobs.map((job) => ({
-        id: job.id,
-        friendCode: job.friendCode,
-        skipUpdateScore: job.skipUpdateScore,
-        botUserFriendCode: job.botUserFriendCode ?? null,
-        status: job.status,
-        stage: job.stage,
-        error: job.error ?? null,
-        executing: job.executing,
-        scoreProgress: job.scoreProgress ?? null,
-        updateScoreDuration: job.updateScoreDuration ?? null,
-        createdAt: job.createdAt.toISOString(),
-        updatedAt: job.updatedAt.toISOString(),
-        pickedAt: job.pickedAt?.toISOString() ?? null,
-      })),
+      data: jobs.map((job) => {
+        const { _id, __v, ...raw } = job as Record<string, unknown>;
+        return {
+          id: job.id,
+          friendCode: job.friendCode,
+          skipUpdateScore: job.skipUpdateScore,
+          botUserFriendCode: job.botUserFriendCode ?? null,
+          status: job.status,
+          stage: job.stage,
+          error: job.error ?? null,
+          executing: job.executing,
+          scoreProgress: job.scoreProgress ?? null,
+          updateScoreDuration: job.updateScoreDuration ?? null,
+          createdAt: job.createdAt.toISOString(),
+          updatedAt: job.updatedAt.toISOString(),
+          pickedAt: job.pickedAt?.toISOString() ?? null,
+          raw,
+        };
+      }),
       total,
       page: params.page,
       pageSize: params.pageSize,
