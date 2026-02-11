@@ -234,6 +234,21 @@ export class MaimaiHttpClient {
 
         return result;
       } catch (e: unknown) {
+        // 记录错误日志
+        if (this.jobId) {
+          try {
+            const error = e as Error;
+            recordApiLog(this.jobId, {
+              url,
+              method: options.method ?? "GET",
+              statusCode: 0,
+              responseBody: error.message ?? String(e),
+            });
+          } catch {
+            // Best-effort logging; don't impact main request flow
+          }
+        }
+
         if (e instanceof CookieExpiredError) {
           throw e;
         }
