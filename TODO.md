@@ -19,10 +19,11 @@
 - [] job 最长 timeout(一小时？)
 - [] https://github.com/Lxns-Network/maimai-prober-frontend/blob/bbaa066ba0f2d06ced0a9f5306ac55a52195b1c2/src/pages/public/Chart.tsx#L390 铺面预览?
 - [] 所有铺面 search by name
-- [] TODO セイクリッド　ルイン 传不上去 圣墟 / 虚拟赛车 也传不上去
+- [] TODO セイクリッド　ルイン 传不上去 圣墟 / 虚拟赛车 也传不上去 -> 全角半角空格问题
 - [] TODO ADB 控制安卓自动恢复登陆页面
 - [] todo REMOVE utage from b50
 - [] 更新完成自动导出水鱼
+- [] TODO idle update 触发 hanlde deploy 打断的情况
 
   [364] "D✪N’T ST✪P R✪CKIN’" (standard) charts: 0,1,2,3,4
   [383] "Link" (standard) charts: 0,1,2,3
