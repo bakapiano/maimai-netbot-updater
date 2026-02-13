@@ -84,6 +84,9 @@ jobs:
             # Remove old containers
             sudo $COMPOSE_CMD up -d --no-deps --scale backend=2 --remove-orphans backend
 
+            # Clean up dangling images
+            sudo docker image prune -f
+
             # Final health check via Nginx
             echo "Running final health check via Nginx..."
             for i in 1 2 3 4 5; do

@@ -37,6 +37,7 @@ jobs:
             else
               sudo docker compose -f frontend/docker-compose.yml up -d --build || exit 1
             fi
+            sudo docker image prune -f
             for i in 1 2 3 4 5; do
               if curl -fsS http://localhost:8848 >/dev/null; then
                 echo "Health check passed"
