@@ -16,6 +16,9 @@ export default function AdminSyncPage() {
   const [coverSyncing, setCoverSyncing] = useState(false);
   const [coverSyncResult, setCoverSyncResult] = useState("");
 
+  const [coverForceSyncing, setCoverForceSyncing] = useState(false);
+  const [coverForceSyncResult, setCoverForceSyncResult] = useState("");
+
   const [musicSyncing, setMusicSyncing] = useState(false);
   const [musicSyncResult, setMusicSyncResult] = useState("");
 
@@ -84,6 +87,27 @@ export default function AdminSyncPage() {
     }
   }, [password]);
 
+  const forceSyncCovers = useCallback(async () => {
+    if (!password) return;
+    setCoverForceSyncing(true);
+    setCoverForceSyncResult("");
+    const res = await adminFetch<{
+      ok: boolean;
+      total: number;
+      saved: number;
+      skipped: number;
+      failed: number;
+    }>("/api/admin/force-sync-covers", password, { method: "POST" });
+    setCoverForceSyncing(false);
+    if (res.ok && res.data) {
+      setCoverForceSyncResult(
+        `完成: 总计 ${res.data.total}, 保存 ${res.data.saved}, 跳过 ${res.data.skipped}, 失败 ${res.data.failed}`,
+      );
+    } else {
+      setCoverForceSyncResult(`失败: ${res.error}`);
+    }
+  }, [password]);
+
   const syncMusic = useCallback(async () => {
     if (!password) return;
     setMusicSyncing(true);
@@ -148,10 +172,24 @@ export default function AdminSyncPage() {
               >
                 同步封面
               </Button>
+              <Button
+                variant="light"
+                color="orange"
+                leftSection={<IconRefresh size={16} />}
+                onClick={forceSyncCovers}
+                loading={coverForceSyncing}
+              >
+                强制重新同步封面
+              </Button>
             </Group>
             {coverSyncResult && (
               <Text size="sm" c="dimmed">
                 {coverSyncResult}
+              </Text>
+            )}
+            {coverForceSyncResult && (
+              <Text size="sm" c="dimmed">
+                {coverForceSyncResult}
               </Text>
             )}
           </div>

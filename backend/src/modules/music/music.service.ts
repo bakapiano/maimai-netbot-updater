@@ -89,14 +89,6 @@ export class MusicService implements OnModuleInit {
       this.configService.get<string>('MUSIC_SYNC_CRON') ??
       CronExpression.EVERY_6_HOURS;
     this.registerCron(cronExpression);
-    // try {
-    //   await this.syncMusicData();
-    // } catch (error) {
-    //   this.logger.error(
-    //     'Initial music data sync failed',
-    //     error instanceof Error ? error.stack : String(error),
-    //   );
-    // }
   }
 
   private registerCron(expression: string) {

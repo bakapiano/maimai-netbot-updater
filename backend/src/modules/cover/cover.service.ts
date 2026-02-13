@@ -6,6 +6,15 @@ import { join } from 'node:path';
 
 import { MusicEntity } from '../music/music.schema';
 import type { MusicDocument } from '../music/music.schema';
+import { MusicService } from '../music/music.service';
+import type { MusicDataSource } from '../music/music.service';
+import {
+  buildDivingFishDocs,
+  buildLxnsDocs,
+  buildIdMap,
+} from '../../common/prober/id-map';
+import { getLxnsSongListUrl } from '../../common/prober/lxns/transform';
+import type { LxnsApiResponse } from '../../common/prober/lxns/transform';
 
 type SyncSummary = {
   total: number;
@@ -14,29 +23,40 @@ type SyncSummary = {
   failed: number;
 };
 
+const DIVING_FISH_MUSIC_URL =
+  'https://www.diving-fish.com/api/maimaidxprober/music_data';
+
 @Injectable()
 export class CoverService {
   private readonly logger = new Logger(CoverService.name);
-  private readonly baseUrl = 'https://www.diving-fish.com/covers';
+  private readonly divingFishCoverBase = 'https://www.diving-fish.com/covers';
+  private readonly lxnsCoverBase = 'https://assets.lxns.net/maimai/jacket';
   private readonly baseDir = join(process.cwd(), 'covers');
 
   constructor(
     @InjectModel(MusicEntity.name)
     private readonly musicModel: Model<MusicDocument>,
+    private readonly musicService: MusicService,
   ) {}
 
   private padId(id: string) {
     return id.length < 5 ? id.padStart(5, '0') : id;
   }
 
-  private buildRemoteUrl(id: string) {
-    const padded = this.padId(id);
-    return `${this.baseUrl}/${padded}.png`;
-  }
-
   private buildLocalPath(id: string) {
     const padded = this.padId(id);
     return join(this.baseDir, `${padded}.png`);
+  }
+
+  /** diving-fish cover URL: 5-digit zero-padded id */
+  private buildDivingFishUrl(divingFishId: string) {
+    const padded = this.padId(divingFishId);
+    return `${this.divingFishCoverBase}/${padded}.png`;
+  }
+
+  /** lxns cover URL: raw numeric song id */
+  private buildLxnsUrl(lxnsId: string) {
+    return `${this.lxnsCoverBase}/${lxnsId}.png!webp`;
   }
 
   async getLocalPathIfExists(id: string) {
@@ -62,7 +82,64 @@ export class CoverService {
     await mkdir(this.baseDir, { recursive: true });
   }
 
+  // ---------------------------------------------------------------------------
+  // Build the cross-source ID mapping
+  // ---------------------------------------------------------------------------
+
+  private async buildCrossIdMap(dataSource: MusicDataSource): Promise<{
+    toDivingFishId: (dbId: string) => string | null;
+    toLxnsId: (dbId: string) => string | null;
+  }> {
+    this.logger.log('Fetching both sources to build ID mapping...');
+
+    const [dfRaw, lxnsRaw] = await Promise.all([
+      fetch(DIVING_FISH_MUSIC_URL).then(async (r) => {
+        if (!r.ok) throw new Error(`diving-fish responded ${r.status}`);
+        return r.json() as Promise<any[]>;
+      }),
+      fetch(getLxnsSongListUrl()).then(async (r) => {
+        if (!r.ok) throw new Error(`lxns responded ${r.status}`);
+        return r.json() as Promise<LxnsApiResponse>;
+      }),
+    ]);
+
+    const dfDocs = buildDivingFishDocs(dfRaw);
+    const lxDocs = buildLxnsDocs(lxnsRaw);
+    const { dfToLxns, lxnsToDf } = buildIdMap(dfDocs, lxDocs);
+
+    this.logger.log(
+      `ID mapping built: ${dfToLxns.size} diving-fish↔lxns pairs`,
+    );
+
+    if (dataSource === 'diving-fish') {
+      return {
+        toDivingFishId: (dbId) => dbId, // already diving-fish
+        toLxnsId: (dbId) => dfToLxns.get(dbId) ?? null,
+      };
+    } else {
+      return {
+        toDivingFishId: (dbId) => lxnsToDf.get(dbId) ?? null,
+        toLxnsId: (dbId) => dbId, // already lxns
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // syncAll
+  // ---------------------------------------------------------------------------
+
   async syncAll(): Promise<SyncSummary> {
+    return this.doSync(false);
+  }
+
+  async forceSyncAll(): Promise<SyncSummary> {
+    return this.doSync(true);
+  }
+
+  private async doSync(force: boolean): Promise<SyncSummary> {
+    const dataSource = await this.musicService.getDataSource();
+    this.logger.log(`Current data source: ${dataSource}, force=${force}`);
+
     const musics = await this.musicModel.find().select({ id: 1 }).lean();
     const summary: SyncSummary = {
       total: musics.length,
@@ -73,76 +150,27 @@ export class CoverService {
 
     await this.ensureDir();
 
+    const { toDivingFishId, toLxnsId } = await this.buildCrossIdMap(dataSource);
+
     let processed = 0;
     const tasks = musics.map((m) => async () => {
-      const id = String(m.id);
-      const localPath = this.buildLocalPath(id);
-      const exists = await this.getLocalPathIfExists(id);
-      if (exists) {
+      const dbId = String(m.id);
+      const localPath = this.buildLocalPath(dbId);
+      const exists = await this.getLocalPathIfExists(dbId);
+
+      if (exists && !force) {
         summary.skipped += 1;
       } else {
-        const url = this.buildRemoteUrl(id);
-        try {
-          const res = await fetch(url);
-          if (!res.ok) {
-            // 第一层 fallback: 如果是 1xxxx 格式，尝试 10xxx -> 00xxx
-            if (id.startsWith('1') && id.length === 5) {
-              const fallbackId1 = '00' + id.substring(2);
-              const fallbackUrl1 = this.buildRemoteUrl(fallbackId1);
-              this.logger.log(`Trying fallback for ${id} -> ${fallbackId1}`);
-
-              try {
-                const fallbackRes1 = await fetch(fallbackUrl1);
-                if (fallbackRes1.ok) {
-                  const buf = Buffer.from(await fallbackRes1.arrayBuffer());
-                  await writeFile(localPath, buf);
-                  summary.saved += 1;
-                  return;
-                }
-              } catch (fallbackError1) {
-                this.logger.warn(`First fallback failed for ${fallbackId1}`);
-              }
-            }
-
-            // 第二层 fallback: lxns.net (五位数去掉第一位并去掉前导0，否则直接用原ID)
-            const songId =
-              id.length === 5 ? String(parseInt(id.substring(1))) : id;
-            const fallbackUrl2 = `https://assets.lxns.net/maimai/jacket/${songId}.png!webp`;
-            this.logger.log(
-              `Trying second fallback for ${id} -> songId ${songId}`,
-            );
-
-            try {
-              const fallbackRes2 = await fetch(fallbackUrl2);
-              const cacheControl = fallbackRes2.headers.get('cache-control');
-              if (fallbackRes2.ok && cacheControl !== 'no-cache') {
-                const buf = Buffer.from(await fallbackRes2.arrayBuffer());
-                await writeFile(localPath, buf);
-                summary.saved += 1;
-                return;
-              } else if (cacheControl === 'no-cache') {
-                this.logger.warn(
-                  `Second fallback returned 404 (no-cache) for songId ${songId}`,
-                );
-              }
-            } catch (fallbackError2) {
-              this.logger.warn(
-                `Second fallback also failed for songId ${songId}`,
-              );
-            }
-
-            summary.failed += 1;
-            this.logger.warn(
-              `Cover fetch failed for ${id}: HTTP ${res.status}`,
-            );
-          } else {
-            const buf = Buffer.from(await res.arrayBuffer());
-            await writeFile(localPath, buf);
-            summary.saved += 1;
-          }
-        } catch (e) {
+        const saved = await this.fetchAndSaveCover(
+          dbId,
+          localPath,
+          toDivingFishId,
+          toLxnsId,
+        );
+        if (saved) {
+          summary.saved += 1;
+        } else {
           summary.failed += 1;
-          this.logger.error(`Cover fetch error for ${id}: ${e}`);
         }
       }
 
@@ -158,13 +186,63 @@ export class CoverService {
 
     return summary;
   }
+
+  /**
+   * 1. 先尝试 diving-fish 封面 (用 diving-fish id)
+   * 2. 如果 404，尝试 lxns 封面 (用 lxns id)
+   * 返回是否保存成功
+   */
+  private async fetchAndSaveCover(
+    dbId: string,
+    localPath: string,
+    toDivingFishId: (dbId: string) => string | null,
+    toLxnsId: (dbId: string) => string | null,
+  ): Promise<boolean> {
+    // --- 1. Try diving-fish ---
+    const dfId = toDivingFishId(dbId);
+    if (dfId) {
+      const url = this.buildDivingFishUrl(dfId);
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const buf = Buffer.from(await res.arrayBuffer());
+          await writeFile(localPath, buf);
+          return true;
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    // --- 2. Fallback: lxns ---
+    const lxId = toLxnsId(dbId);
+    if (lxId) {
+      const url = this.buildLxnsUrl(lxId);
+      try {
+        const res = await fetch(url);
+        const cacheControl = res.headers.get('cache-control');
+        if (res.ok && cacheControl !== 'no-cache') {
+          const buf = Buffer.from(await res.arrayBuffer());
+          await writeFile(localPath, buf);
+          return true;
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    this.logger.warn(
+      `Cover not found for dbId=${dbId} (dfId=${dfId ?? '?'}, lxId=${lxId ?? '?'})`,
+    );
+    return false;
+  }
 }
 
 async function runWithConcurrency<T>(
   tasks: Array<() => Promise<T>>,
   limit: number,
 ): Promise<T[]> {
-  const results: T[] = new Array(tasks.length);
+  const results = new Array<T>(tasks.length);
   let next = 0;
 
   const workers = new Array(Math.min(limit, tasks.length))

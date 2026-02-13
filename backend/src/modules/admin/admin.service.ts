@@ -153,6 +153,10 @@ export class AdminService {
     return this.coverService.syncAll();
   }
 
+  async forceSyncCovers() {
+    return this.coverService.forceSyncAll();
+  }
+
   async syncMusic() {
     return this.musicService.syncMusicData();
   }

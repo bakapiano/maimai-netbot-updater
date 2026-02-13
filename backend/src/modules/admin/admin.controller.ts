@@ -92,6 +92,13 @@ export class AdminController {
     return { ok: true, ...result };
   }
 
+  @Post('force-sync-covers')
+  @UseGuards(AdminGuard)
+  async forceSyncCovers() {
+    const result = await this.adminService.forceSyncCovers();
+    return { ok: true, ...result };
+  }
+
   @Post('sync-music')
   @UseGuards(AdminGuard)
   async syncMusic() {

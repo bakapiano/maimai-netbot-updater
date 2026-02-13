@@ -1,15 +1,23 @@
-import { Controller, Get, Param, Post, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 
 import { CoverService } from './cover.service';
+import { AdminGuard } from '../admin/admin.guard';
 
 @Controller('cover')
 export class CoverController {
   constructor(private readonly covers: CoverService) {}
 
   @Post('sync')
+  @UseGuards(AdminGuard)
   async syncAll() {
     return this.covers.syncAll();
+  }
+
+  @Post('force-sync')
+  @UseGuards(AdminGuard)
+  async forceSyncAll() {
+    return await this.covers.forceSyncAll();
   }
 
   @Get(':id')
