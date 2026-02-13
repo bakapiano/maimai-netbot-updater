@@ -530,6 +530,7 @@ export default function SyncPage() {
     const res = await fetchJson<{
       success?: boolean;
       message?: string;
+      scores?: number;
       exported?: number;
       response?: { creates?: number; updates?: number; message?: string };
     }>("/api/sync/latest/diving-fish", {
@@ -543,11 +544,12 @@ export default function SyncPage() {
     setExportLoading(null);
 
     if (res.ok) {
+      const scores = res.data?.scores;
       const creates = res.data?.response?.creates ?? 0;
       const updates = res.data?.response?.updates ?? 0;
       notifications.show({
         title: "导出成功",
-        message: `成绩已导出到 Diving-Fish（新增 ${creates} 条，更新 ${updates} 条）`,
+        message: `成绩已导出到 Diving-Fish（共 ${scores ?? "?"} 条成绩，新增 ${creates} 条，更新 ${updates} 条）`,
         color: "green",
       });
     } else {
@@ -573,6 +575,7 @@ export default function SyncPage() {
     const res = await fetchJson<{
       success?: boolean;
       message?: string;
+      scores?: number;
       exported?: number;
       response?: { success?: boolean; code?: number; data?: unknown[] };
     }>("/api/sync/latest/lxns", {
@@ -586,6 +589,7 @@ export default function SyncPage() {
     setExportLoading(null);
 
     if (res.ok) {
+      const scores = res.data?.scores;
       const dataCount = Array.isArray(res.data?.response?.data)
         ? res.data?.response?.data.length
         : undefined;
@@ -595,7 +599,7 @@ export default function SyncPage() {
         title: "导出成功",
         message:
           count !== undefined
-            ? `成绩已导出到 落雪查分器（${count} 条）`
+            ? `成绩已导出到 落雪查分器（共 ${scores ?? "?"} 条成绩，导出 ${count} 条）`
             : "成绩已导出到 落雪查分器",
         color: "green",
       });

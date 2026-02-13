@@ -55,7 +55,9 @@ export class AuthService {
     // 如果用户开启了闲时更新，优先选择不是闲时更新的那个 bot
     let botUserFriendCode: string | undefined;
     if (user.idleUpdateBotFriendCode) {
-      const availableBots = this.botStatus.getAll().filter((b) => b.available);
+      const availableBots = (await this.botStatus.getAll()).filter(
+        (b) => b.available,
+      );
       const nonIdleBot = availableBots.find(
         (b) => b.friendCode !== user.idleUpdateBotFriendCode,
       );

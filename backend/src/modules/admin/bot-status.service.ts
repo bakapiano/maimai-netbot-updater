@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { JobEntity } from '../job/job.schema';
+import { BotStatusEntity } from './bot-status.schema';
 
 export interface BotStatus {
   friendCode: string;
@@ -12,17 +13,11 @@ export interface BotStatus {
 
 /**
  * Bot 状态管理服务
- * 存储 Worker 上报的 Bot 可用性信息，并定期清理分配给不可用 Bot 的任务
+ * 存储 Worker 上报的 Bot 可用性信息（MongoDB），并定期清理分配给不可用 Bot 的任务
  */
 @Injectable()
 export class BotStatusService implements OnModuleDestroy {
   private readonly logger = new Logger(BotStatusService.name);
-
-  /** Bot 状态: friendCode -> { available, lastReportedAt, friendCount } */
-  private readonly botMap = new Map<
-    string,
-    { available: boolean; lastReportedAt: Date; friendCount: number | null }
-  >();
 
   /** 定期清理不可用 Bot 任务的定时器 */
   private cleanupIntervalId: NodeJS.Timeout | null = null;
@@ -36,6 +31,8 @@ export class BotStatusService implements OnModuleDestroy {
   constructor(
     @InjectModel(JobEntity.name)
     private readonly jobModel: Model<JobEntity>,
+    @InjectModel(BotStatusEntity.name)
+    private readonly botStatusModel: Model<BotStatusEntity>,
   ) {
     this.startCleanup();
   }
@@ -50,17 +47,26 @@ export class BotStatusService implements OnModuleDestroy {
   /**
    * Worker 上报 Bot 状态
    */
-  report(
+  async report(
     bots: { friendCode: string; available: boolean; friendCount?: number }[],
-  ): void {
+  ): Promise<void> {
     const now = new Date();
-    for (const bot of bots) {
-      this.botMap.set(bot.friendCode, {
-        available: bot.available,
-        lastReportedAt: now,
-        friendCount: bot.friendCount ?? null,
-      });
-    }
+    const ops = bots.map((bot) => ({
+      updateOne: {
+        filter: { friendCode: bot.friendCode },
+        update: {
+          $set: {
+            available: bot.available,
+            lastReportedAt: now,
+            friendCount: bot.friendCount ?? null,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await this.botStatusModel.bulkWrite(ops);
+
     this.logger.log(
       `Bot status reported: ${bots.length} bots (${bots.filter((b) => b.available).length} available)`,
     );
@@ -69,31 +75,29 @@ export class BotStatusService implements OnModuleDestroy {
   /**
    * 获取所有 Bot 的状态
    */
-  getAll(): BotStatus[] {
+  async getAll(): Promise<BotStatus[]> {
     const now = Date.now();
-    const result: BotStatus[] = [];
+    const docs = await this.botStatusModel.find().lean().exec();
 
-    for (const [friendCode, status] of this.botMap) {
-      const timeSinceReport = now - status.lastReportedAt.getTime();
+    return docs.map((doc) => {
+      const timeSinceReport = now - new Date(doc.lastReportedAt).getTime();
       const timedOut = timeSinceReport > BotStatusService.REPORT_TIMEOUT_MS;
 
-      result.push({
-        friendCode,
-        available: timedOut ? false : status.available,
-        lastReportedAt: status.lastReportedAt.toISOString(),
-        friendCount: status.friendCount,
-      });
-    }
-
-    return result;
+      return {
+        friendCode: doc.friendCode,
+        available: timedOut ? false : doc.available,
+        lastReportedAt: new Date(doc.lastReportedAt).toISOString(),
+        friendCount: doc.friendCount,
+      };
+    });
   }
 
   /**
    * 获取指定 bot 的好友数量
    */
-  getFriendCount(friendCode: string): number | null {
-    const status = this.botMap.get(friendCode);
-    return status?.friendCount ?? null;
+  async getFriendCount(friendCode: string): Promise<number | null> {
+    const doc = await this.botStatusModel.findOne({ friendCode }).lean().exec();
+    return doc?.friendCount ?? null;
   }
 
   /**
@@ -116,17 +120,17 @@ export class BotStatusService implements OnModuleDestroy {
    */
   private async cleanupStaleJobs(): Promise<void> {
     const now = Date.now();
-    const unavailableBots: string[] = [];
+    const threshold = new Date(now - BotStatusService.REPORT_TIMEOUT_MS);
 
-    for (const [friendCode, status] of this.botMap) {
-      const timeSinceReport = now - status.lastReportedAt.getTime();
-      if (
-        !status.available ||
-        timeSinceReport > BotStatusService.REPORT_TIMEOUT_MS
-      ) {
-        unavailableBots.push(friendCode);
-      }
-    }
+    // 从 DB 查询不可用的 bot
+    const unavailableDocs = await this.botStatusModel
+      .find({
+        $or: [{ available: false }, { lastReportedAt: { $lt: threshold } }],
+      })
+      .lean()
+      .exec();
+
+    const unavailableBots = unavailableDocs.map((d) => d.friendCode);
 
     if (!unavailableBots.length) {
       return;

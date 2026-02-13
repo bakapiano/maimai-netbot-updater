@@ -39,7 +39,8 @@ function mapVersion(version: string | null | undefined): string | null {
 }
 
 function normalizeTitle(title: string | undefined): string | undefined {
-  return title?.replace(/\u3000/g, ' ');
+  return title;
+  // return title?.replace(/\u3000/g, ' ');
 }
 
 type ItemOverride = {

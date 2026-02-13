@@ -134,7 +134,9 @@ export class UsersController {
     }
 
     // 检查 bot 好友容量
-    const availableBots = this.botStatus.getAll().filter((b) => b.available);
+    const availableBots = (await this.botStatus.getAll()).filter(
+      (b) => b.available,
+    );
     if (!availableBots.length) {
       throw new BadRequestException('当前没有可用的 Bot');
     }
@@ -146,7 +148,8 @@ export class UsersController {
     let minCount = Infinity;
     for (const bot of availableBots) {
       const count = await this.users.countIdleUpdateByBot(bot.friendCode);
-      const reportedCount = this.botStatus.getFriendCount(bot.friendCode) ?? 0;
+      const reportedCount =
+        (await this.botStatus.getFriendCount(bot.friendCode)) ?? 0;
       const effectiveCount = Math.max(count, reportedCount);
       if (effectiveCount < limit && effectiveCount < minCount) {
         selectedBot = bot.friendCode;

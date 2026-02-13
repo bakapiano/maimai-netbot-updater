@@ -232,6 +232,7 @@ export class SyncService {
       const res = await uploadDivingFishRecords(records, importToken);
       return {
         status: res.status,
+        scores: scores.length,
         exported: records.length,
         response: res.data,
       };
@@ -260,6 +261,7 @@ export class SyncService {
 
     return {
       status: res.status,
+      scores: scores.length,
       exported: res.exported,
       response: res.response,
     };

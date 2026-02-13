@@ -39,7 +39,7 @@ export class AdminController {
       }[];
     },
   ) {
-    this.botStatusService.report(body.bots);
+    await this.botStatusService.report(body.bots);
     return { ok: true };
   }
 
