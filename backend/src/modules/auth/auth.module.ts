@@ -24,7 +24,7 @@ import { randomBytes } from 'node:crypto';
       }),
     }),
     UsersModule,
-    AdminModule,
+    forwardRef(() => AdminModule),
     forwardRef(() => JobModule),
   ],
   controllers: [AuthController],
