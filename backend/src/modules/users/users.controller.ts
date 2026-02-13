@@ -141,14 +141,16 @@ export class UsersController {
 
     const limit = Number(process.env.BOT_IDLE_FRIEND_LIMIT ?? 80);
 
-    // 找一个有容量的 bot
+    // 找好友最少的一个有容量的 bot，避免倾斜到同一个 bot
     let selectedBot: string | null = null;
+    let minCount = Infinity;
     for (const bot of availableBots) {
       const count = await this.users.countIdleUpdateByBot(bot.friendCode);
       const reportedCount = this.botStatus.getFriendCount(bot.friendCode) ?? 0;
-      if (count < limit && reportedCount < limit) {
+      const effectiveCount = Math.max(count, reportedCount);
+      if (effectiveCount < limit && effectiveCount < minCount) {
         selectedBot = bot.friendCode;
-        break;
+        minCount = effectiveCount;
       }
     }
 
